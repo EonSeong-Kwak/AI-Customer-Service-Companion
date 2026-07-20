@@ -1,0 +1,19 @@
+用以下方式获取 openai：
+已有文件".env", ".secrets.key"
+import os
+from cryptography.fernet import Fernet, InvalidToken
+from dotenv import set_key, dotenv_values
+from openai import OpenAI
+def get_openaiKey():
+    if not os.path.exists(".env") or not os.path.exists(".secrets.key"): return None
+    fernet = None
+    with open(".secrets.key", "rb") as f: 
+        fernet = Fernet(f.read())
+    config = dotenv_values(".env")
+    encrypted_value = config.get("DASHSCOPE_API_KEY_ENC")
+    if not encrypted_value: return None
+    try: return fernet.decrypt(encrypted_value.encode()).decode()
+    except InvalidToken: return None
+获取阿里云 openapi key的方法：get_openaiKey() 
+利用阿里云 OPENAI ，同时model="deepseek-r1"。
+
