@@ -35,48 +35,7 @@ git clone https://github.com/你的用户名/智能客服陪练.git
 cd 智能客服陪练
 ```
 
-### 2. 配置 API Key
-
-本项目使用阿里云百炼 API，需要配置 API Key：
-
-#### 方式一：自动配置（推荐）
-
-```bash
-# 运行配置脚本
-python3 setup_api_key.py
-
-# 按提示输入你的阿里云百炼 API Key
-# 脚本会自动生成加密密钥并加密保存 API Key
-```
-
-#### 方式二：手动配置
-
-1. 获取 API Key：
-   - 打开 https://bailian.console.aliyun.com/
-   - 在「API-KEY 管理」中创建新的 API Key
-
-2. 生成加密密钥：
-   ```bash
-   python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" > .secrets.key
-   ```
-
-3. 加密 API Key：
-   ```bash
-   python3 -c "
-   from cryptography.fernet import Fernet
-   key = open('.secrets.key').read().encode()
-   api_key = '你的API Key'
-   encrypted = Fernet(key).encrypt(api_key.encode()).decode()
-   print(encrypted)
-   "
-   ```
-
-4. 创建 `.env` 文件：
-   ```bash
-   echo "DASHSCOPE_API_KEY_ENC='刚才生成的加密字符串'" > .env
-   ```
-
-### 3. 安装依赖
+### 2. 安装依赖
 
 ```bash
 # 后端
@@ -90,7 +49,7 @@ npm install
 cd ..
 ```
 
-### 4. 初始化数据库
+### 3. 初始化数据库
 
 ```bash
 # 确保 MySQL 已启动，并创建 customer_service 数据库
@@ -98,7 +57,7 @@ source venv/bin/activate
 cd backend && python init_db.py && cd ..
 ```
 
-### 5. 启动服务
+### 4. 启动服务
 
 ```bash
 chmod +x start_prod.sh
