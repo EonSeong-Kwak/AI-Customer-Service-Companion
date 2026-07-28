@@ -67,49 +67,18 @@ DEFAULT_INTENT_TEMPLATES: Dict[str, List[Dict]] = {
 
 
 # ===== 默认 PBL 项目场景 =====
+# 注意：每条默认场景的 business_line 必须唯一、且需与知识库实际识别出的业务线命名一致
+# （如"卡片挂失"而非"信用卡挂失"），否则会导致：
+# 1) random.choice 抽样时同一业务线权重过高，反复抽到同一个场景；
+# 2) 该业务线对应的知识点/上下文注入找不到匹配的真实知识库内容。
 DEFAULT_PROJECT_SCENARIOS: List[Dict] = [
-    {
-        "name": "完整投诉处理流程",
-        "description": "模拟客户投诉全流程：情绪安抚 → 核实问题 → 给出方案，考验客服全流程把控能力",
-        "business_line": "信用卡挂失",
-        "difficulty": "hard",
-        "tasks": [
-            {
-                "name": "接待并安抚情绪",
-                "weight": 0.3,
-                "success_criteria": ["抱歉", "理解", "帮您", "抱歉给您"],
-                "intents": [
-                    {"name": "表达不满", "success_criteria": ["丢", "收费", "什么服务"], "description": "客户愤怒表达不满"},
-                    {"name": "接受安抚", "success_criteria": ["好", "行", "那你说"], "description": "客户情绪平复"}
-                ]
-            },
-            {
-                "name": "核实问题原因",
-                "weight": 0.4,
-                "success_criteria": ["核实", "查询", "帮您查", "看一下"],
-                "intents": [
-                    {"name": "描述问题", "success_criteria": ["丢了", "不见了", "公交车"], "description": "客户描述具体情况"},
-                    {"name": "确认信息", "success_criteria": ["好", "卡号", "姓名"], "description": "客户配合提供信息"}
-                ]
-            },
-            {
-                "name": "给出解决方案并确认",
-                "weight": 0.3,
-                "success_criteria": ["挂失", "办理", "补办", "建议"],
-                "intents": [
-                    {"name": "询问方案", "success_criteria": ["怎么办", "怎么弄", "现在"], "description": "客户询问解决方案"},
-                    {"name": "确认满意", "success_criteria": ["好的", "谢谢", "明白"], "description": "客户接受方案"}
-                ]
-            }
-        ]
-    },
     # ===== 示范样例：完整业务流程项目场景（V3.4 增强）=====
     # 数据结构在原有 weight/success_criteria/intents 基础上，
     # 补充 key_points/goals/max_rounds 字段，便于配置管理和前端展示。
     {
         "name": "信用卡挂失完整流程",
         "description": "模拟客户信用卡丢失后的完整处理流程：身份核验 → 办理挂失 → 盗刷处理，考验客服合规意识与应急处理能力",
-        "business_line": "信用卡挂失",
+        "business_line": "卡片挂失",
         "difficulty": "medium",
         "tasks": [
             {
@@ -156,7 +125,7 @@ DEFAULT_PROJECT_SCENARIOS: List[Dict] = [
     {
         "name": "密码管理完整流程",
         "description": "模拟客户密码管理全流程：身份核验 → 密码重置 → 安全提示，考验客服合规操作与安全宣导能力",
-        "business_line": "密码重置",
+        "business_line": "密码管理",
         "difficulty": "medium",
         "tasks": [
             {
@@ -203,7 +172,7 @@ DEFAULT_PROJECT_SCENARIOS: List[Dict] = [
     {
         "name": "账户冻结排查流程",
         "description": "模拟客户账户被冻结后的排查处理流程：了解情况 → 冻结操作说明 → 解冻指导，考验客服问题诊断与流程指引能力",
-        "business_line": "账户冻结",
+        "business_line": "账户管控",
         "difficulty": "hard",
         "tasks": [
             {

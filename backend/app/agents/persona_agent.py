@@ -1,6 +1,7 @@
 from typing import List, Dict
 from app.services.llm_adapter import llm_client
 from app.services.retrieval_pipeline import retrieval_pipeline
+from app.services.coze_client import coze_client
 from app.core.logger import logger
 
 # V3.2: 角色红线 —— 所有 persona 共用，强约束角色边界
@@ -29,43 +30,33 @@ class PersonaAgent:
         context_injection = ""
         if business_context:
             context_injection = f"\n\n【业务知识参考】（请基于以下真实业务知识回复，确保业务细节准确）：\n{business_context}"
-        
+
+        full_instruction = f"你现在扮演一个银行客户。\n{ROLE_REDLINE}\n\n人格规则与背景设定：\n{system_prompt}{context_injection}\n\n请始终保持在此人格下，使用客户的口吻回复。控制在1-2句话。"
+
+        # V5.0: 优先用 Coze 智能体扮演客户；未配置或调用失败时降级回默认大模型，保证考试不中断
+        if coze_client.enabled:
+            trainee_message = next((m["content"] for m in reversed(chat_history) if m["role"] == "trainee"), "")
+            coze_input = f"{full_instruction}\n\n【客服（考生）本轮回复】{trainee_message}"
+            try:
+                reply = await coze_client.chat(coze_input, trace_id=trace_id, timeout=90)
+                if reply:
+                    return reply
+                logger.bind(trace_id=trace_id).warning("Coze 返回空回复，降级到默认大模型")
+            except Exception as e:
+                logger.bind(trace_id=trace_id).error(f"Coze 调用失败，降级到默认大模型: {e}")
+
         messages = [
-            {"role": "system", "content": f"你现在扮演一个银行客户。\n{ROLE_REDLINE}\n\n人格规则与背景设定：\n{system_prompt}{context_injection}\n\n请始终保持在此人格下，使用客户的口吻回复。控制在1-2句话。"}
+            {"role": "system", "content": full_instruction}
         ]
-        
+
         for msg in chat_history:
             if msg["role"] == "trainee": # 考生的话对于 LLM 来说是 user 输入
                 messages.append({"role": "user", "content": msg["content"]})
             else: # 之前客户说的话，对于 LLM 来说是 assistant 的历史
                 messages.append({"role": "assistant", "content": msg["content"]})
-                
+
         response = await llm_client.async_chat_completion(messages, trace_id=trace_id, model="chat")
         return response
-
-    async def generate_reply_stream(self, system_prompt: str, chat_history: List[Dict[str, str]], trace_id: str = "N/A", business_context: str = ""):
-        """
-        流式生成回复
-        V3.0: 注入业务上下文
-        """
-        logger.bind(trace_id=trace_id).info("PersonaAgent 正在流式生成客户回复")
-        
-        context_injection = ""
-        if business_context:
-            context_injection = f"\n\n【业务知识参考】（请基于以下真实业务知识回复，确保业务细节准确）：\n{business_context}"
-        
-        messages = [
-            {"role": "system", "content": f"你现在扮演一个银行客户。\n{ROLE_REDLINE}\n\n人格规则与背景设定：\n{system_prompt}{context_injection}\n\n请始终保持在此人格下，使用客户的口吻回复。控制在1-2句话。"}
-        ]
-        
-        for msg in chat_history:
-            if msg["role"] == "trainee":
-                messages.append({"role": "user", "content": msg["content"]})
-            else:
-                messages.append({"role": "assistant", "content": msg["content"]})
-                
-        async for chunk in llm_client.chat_completion_stream(messages, trace_id=trace_id, model="chat"):
-            yield chunk
 
     async def get_business_context(self, query: str, trace_id: str = "N/A") -> str:
         """V3.0: 通过高级检索管线获取业务上下文"""

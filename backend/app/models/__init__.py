@@ -224,6 +224,46 @@ class IntentDefinition(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class BusinessLineKeyPoint(Base):
+    """踩分点持久化表（V5.0 自适应知识进化引擎 · 阶段一）
+    踩分点不再每次考试临时生成，而是沉淀成按业务线固定的题库，
+    并累计统计全体学员的命中率，供后续识别"群体性薄弱知识点"使用。
+    """
+    __tablename__ = "business_line_key_points"
+
+    id = Column(String(255), primary_key=True, index=True)
+    business_line = Column(String(100), index=True)
+    point = Column(String(255), nullable=False)        # 踩分点名称
+    weight = Column(Float, default=0.25)                # 权重
+    keywords = Column(JSON, default=list)                # 关键词列表
+    order_index = Column(Integer, default=0)             # 生成顺序（同一业务线内批量插入 created_at 相同，需显式排序保证复用时顺序稳定）
+    hit_count = Column(Integer, default=0)               # 累计命中次数
+    total_count = Column(Integer, default=0)             # 累计遇到次数（作为分母）
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class KnowledgeDraft(Base):
+    """AI 起草的知识补充草稿（V5.0 自适应知识进化引擎 · 阶段二）
+    由系统扫描全员命中率低的踩分点后自动起草，必须经管理员审核确认才会正式写入知识库，
+    审核过程不跳过人工确认。
+    """
+    __tablename__ = "knowledge_drafts"
+
+    id = Column(String(255), primary_key=True, index=True)
+    source_key_point_id = Column(String(255), ForeignKey("business_line_key_points.id"), nullable=True)
+    business_line = Column(String(100), index=True)
+    source_point = Column(String(255))                   # 触发生成的踩分点名称（冗余保存，便于展示）
+    source_hit_rate = Column(Float, nullable=True)        # 生成时刻的命中率快照
+    title = Column(String(255), nullable=False)
+    content = Column(String(4000), nullable=False)
+    keywords = Column(JSON, default=list)
+    status = Column(String(50), default="pending", index=True)  # pending / approved / rejected
+    node_id = Column(String(255), nullable=True)           # 入库后对应的知识库 node_id
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+
+
 class KnowledgeRelation(Base):
     """知识图谱关系表（MySQL版，替代Neo4j）"""
     __tablename__ = "knowledge_relations"
@@ -234,3 +274,88 @@ class KnowledgeRelation(Base):
     relation_type = Column(String(100), default="related")  # 关系类型：related, prerequisite, extends, contradicts
     weight = Column(Float, default=1.0)  # 关系权重0-1
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# ===== V6.0 Coze 工作流驱动的"练习/通关"模块（独立新增，不影响原有练习体系） =====
+
+class CozeWorkflowRegistry(Base):
+    """业务线 ↔ Coze 工作流 注册表：管理员运行时维护，无需重新部署"""
+    __tablename__ = "coze_workflow_registry"
+
+    id = Column(String(255), primary_key=True, index=True)
+    business_line = Column(String(100), unique=True, index=True, nullable=False)
+    workflow_id = Column(String(255), nullable=False)          # Coze 工作流 ID
+    bot_id = Column(String(255), nullable=True)                 # 可选：覆盖全局 COZE_BOT_ID
+    app_id = Column(String(255), nullable=True)                 # 可选：与 bot_id 二选一
+    mode_param_key = Column(String(100), default="mode")        # 传给"分类"节点的参数名
+    practice_mode_value = Column(String(100), default="practice")
+    tongguan_mode_value = Column(String(100), default="tongguan")
+    enabled = Column(Boolean, default=True)                     # 未联调通过前可先禁用，考生端自动走本地兜底
+    notes = Column(String(1000), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class PracticeNodeQuestion(Base):
+    """练习节点题目镜像表：我方对 Coze 工作流各节点"应当是什么内容"的独立副本。
+    既是本地兜底/打分依据，也是管理员往 Coze 控制台手动粘贴内容时的标准文本来源
+    （Coze 工作流节点内容没有公开 API 可程序化修改）。
+    """
+    __tablename__ = "practice_node_questions"
+
+    id = Column(String(255), primary_key=True, index=True)
+    business_line = Column(String(100), index=True, nullable=False)
+    node_key = Column(String(255), nullable=True)               # 管理员对照 Coze 节点自行填写的标识/标题
+    order_index = Column(Integer, default=0, index=True)        # 该业务线节点序列中的顺序，是打分对齐的权威依据
+    question_text = Column(String(1000), nullable=False)        # 练习模式下的固定提问原文
+    reference_answer = Column(String(2000), nullable=False)
+    key_points = Column(JSON, default=list)
+    difficulty = Column(String(50), default="medium")
+    source_node_id = Column(String(255), nullable=True)         # 关联知识库节点（出题素材来源）
+    sync_status = Column(String(50), default="unsynced")        # unsynced/synced，人工标记，无法程序校验
+    last_synced_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class PracticeQuestionDraft(Base):
+    """AI 起草的练习题草稿，人工审核通过后才写入 PracticeNodeQuestion（与 KnowledgeDraft 同构）"""
+    __tablename__ = "practice_question_drafts"
+
+    id = Column(String(255), primary_key=True, index=True)
+    business_line = Column(String(100), index=True, nullable=False)
+    source_node_id = Column(String(255), nullable=True)         # 生成时使用的知识库节点
+    scenario = Column(String(1000), nullable=False)             # 即拟定的 question_text
+    reference_answer = Column(String(2000), nullable=False)
+    key_points = Column(JSON, default=list)
+    difficulty = Column(String(50), default="medium")
+    status = Column(String(50), default="pending", index=True)  # pending/approved/rejected
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class PracticeWorkflowSession(Base):
+    """练习/通关 工作流会话记录：一次"从头跑到尾"的完整会话"""
+    __tablename__ = "practice_workflow_sessions"
+
+    id = Column(String(255), primary_key=True, index=True)
+    trainee_id = Column(String(255), ForeignKey("users.id"), index=True)
+    business_line = Column(String(100), index=True, nullable=False)
+    mode = Column(String(20), nullable=False)                   # "practice" / "tongguan"
+    coze_workflow_id = Column(String(255), nullable=True)       # 快照：当时使用的 workflow_id
+    status = Column(String(50), default="in_progress")          # in_progress/completed/failed
+    current_event_id = Column(String(255), nullable=True)       # 等待 resume 的中断标识
+    current_interrupt_type = Column(Integer, nullable=True)
+    current_required_params = Column(JSON, nullable=True)       # 续跑时 resume_data 要用的参数名列表（实测 Coze 要求 JSON 而非纯文本）
+    coze_execute_id = Column(String(255), nullable=True)        # 便于对照 Coze 侧 debug_url 排障
+    coze_raw_output = Column(String(2000), nullable=True)       # Coze 工作流自己在 End 节点输出的原始内容（若有），仅作参考展示，不参与我方通关判定
+    transcript = Column(JSON, default=list)                     # [{order_index, node_key, question_text, trainee_answer}]
+    used_fallback = Column(Boolean, default=False)               # 本场是否曾降级为本地兜底
+    key_points_total = Column(Integer, default=0)
+    key_points_hit = Column(Integer, default=0)
+    coverage_rate = Column(Float, nullable=True)
+    passed = Column(Boolean, nullable=True)                     # 仅 tongguan 模式有意义
+    overall_score = Column(Integer, nullable=True)
+    weakness_tags = Column(JSON, default=list)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)

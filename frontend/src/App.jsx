@@ -7,6 +7,8 @@ import MainLayout from './components/MainLayout'
 import AdminDashboard from './pages/AdminDashboard'
 import TraineePortal from './pages/TraineePortal'
 import DynamicExam from './pages/DynamicExam'
+import CozePracticeTrainee from './pages/CozePracticeTrainee'
+import CozePracticeAdmin from './pages/CozePracticeAdmin'
 
 function App() {
   return (
@@ -42,6 +44,8 @@ function App() {
               <Route path="admin" element={<AdminDashboard />} />
               <Route path="trainee" element={<TraineePortal />} />
               <Route path="dynamic-exam" element={<DynamicExam />} />
+              <Route path="coze-practice" element={<CozePracticeTrainee />} />
+              <Route path="coze-practice-admin" element={<CozePracticeAdmin />} />
             </Route>
           </Routes>
         </BrowserRouter>

@@ -18,6 +18,11 @@ class Settings(BaseSettings):
 
     dashscope_api_key_enc: str = ""
 
+    # Coze 智能体（动态模拟考试的客户角色扮演）
+    COZE_API_TOKEN: str = ""
+    COZE_BOT_ID: str = ""
+    COZE_BASE_URL: str = "https://api.coze.cn"
+
     class Config:
         env_file = str(_PROJECT_ROOT / ".env")
         extra = "ignore"

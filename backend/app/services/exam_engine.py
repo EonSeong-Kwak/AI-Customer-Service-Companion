@@ -22,7 +22,7 @@ from app.services.intent_state_machine import (
 )
 from app.core.logger import logger
 from app.core.database import AsyncSessionLocal
-from app.models import Persona, ProjectScenario
+from app.models import Persona, ProjectScenario, BusinessLineKeyPoint
 
 
 # ===== 业务线管理器：从知识库动态提取业务线与关联图谱 =====
@@ -603,7 +603,7 @@ class DynamicExamEngine:
 
         # 降级：使用默认项目场景（50% 概率使用项目制，50% 使用单业务线）
         if random.random() < 0.5 and DEFAULT_PROJECT_SCENARIOS:
-            scenario = DEFAULT_PROJECT_SCENARIOS[0]
+            scenario = random.choice(DEFAULT_PROJECT_SCENARIOS)
             logger.bind(trace_id=trace_id).info(
                 f"使用默认 PBL 项目场景: {scenario['name']}"
             )
@@ -747,7 +747,79 @@ class DynamicExamEngine:
     
     async def _generate_key_points(self, business_line: str, trace_id: str = "N/A",
                                     node_ids: List[str] = None) -> List[Dict]:
-        """生成踩分点（基于业务线，优先从知识库节点提取真实内容）"""
+        """获取踩分点（V5.0：优先复用已持久化的业务线题库，只有首次遇到该业务线才现场生成）"""
+        persisted = await self._load_persisted_key_points(business_line, trace_id=trace_id)
+        if persisted:
+            return persisted
+        generated = await self._generate_key_points_via_llm(business_line, trace_id=trace_id, node_ids=node_ids)
+        await self._persist_key_points(business_line, generated, trace_id=trace_id)
+        return generated
+
+    async def _load_persisted_key_points(self, business_line: str, trace_id: str = "N/A") -> Optional[List[Dict]]:
+        """从数据库读取该业务线已沉淀的踩分点题库，没有则返回 None"""
+        try:
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(
+                    select(BusinessLineKeyPoint)
+                    .where(BusinessLineKeyPoint.business_line == business_line)
+                    .order_by(BusinessLineKeyPoint.order_index)
+                )
+                rows = result.scalars().all()
+                if not rows:
+                    return None
+                logger.bind(trace_id=trace_id).info(f"复用业务线「{business_line}」已持久化的 {len(rows)} 个踩分点")
+                return [
+                    {"point": r.point, "weight": r.weight, "keywords": r.keywords or []}
+                    for r in rows
+                ]
+        except Exception as e:
+            logger.bind(trace_id=trace_id).warning(f"读取持久化踩分点失败，降级为现场生成: {e}")
+            return None
+
+    async def _persist_key_points(self, business_line: str, key_points: List[Dict], trace_id: str = "N/A"):
+        """将首次现场生成的踩分点沉淀入库，供该业务线之后的所有考试复用"""
+        try:
+            async with AsyncSessionLocal() as session:
+                for idx, kp in enumerate(key_points):
+                    session.add(BusinessLineKeyPoint(
+                        id=str(uuid.uuid4()),
+                        business_line=business_line,
+                        point=kp.get("point", ""),
+                        weight=kp.get("weight", 0.25),
+                        keywords=kp.get("keywords", []),
+                        order_index=idx,
+                        hit_count=0,
+                        total_count=0
+                    ))
+                await session.commit()
+                logger.bind(trace_id=trace_id).info(f"业务线「{business_line}」的 {len(key_points)} 个踩分点已沉淀入库")
+        except Exception as e:
+            logger.bind(trace_id=trace_id).warning(f"踩分点持久化失败（不影响本场考试）: {e}")
+
+    async def _record_key_point_hits(self, business_line: str, key_points_hit: List[Dict], trace_id: str = "N/A"):
+        """V5.0：累计更新该业务线各踩分点的全员命中率统计"""
+        if not key_points_hit:
+            return
+        try:
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(
+                    select(BusinessLineKeyPoint).where(BusinessLineKeyPoint.business_line == business_line)
+                )
+                rows = {r.point: r for r in result.scalars().all()}
+                for kp in key_points_hit:
+                    row = rows.get(kp.get("point"))
+                    if not row:
+                        continue
+                    row.total_count += 1
+                    if kp.get("hit"):
+                        row.hit_count += 1
+                await session.commit()
+        except Exception as e:
+            logger.bind(trace_id=trace_id).warning(f"踩分点命中率统计更新失败（不影响本场考试评分）: {e}")
+
+    async def _generate_key_points_via_llm(self, business_line: str, trace_id: str = "N/A",
+                                            node_ids: List[str] = None) -> List[Dict]:
+        """现场调用 LLM 生成踩分点（仅在该业务线首次出现、还没有持久化题库时调用）"""
         # 优先从知识库节点提取踩分点素材
         kb_context = ""
         if node_ids:
@@ -825,6 +897,9 @@ class DynamicExamEngine:
         
         # 1. 踩分点检测
         key_points_hit = self._check_key_points(trainee_answer, exam_state["key_points"])
+
+        # V5.0: 累计更新该业务线各踩分点的全员命中率统计（异步，失败不影响本场考试）
+        await self._record_key_point_hits(exam_state["current_business_line"], key_points_hit, trace_id=trace_id)
 
         # 2. 烦躁值计算（V3.2：辱骂兜底 + LLM 评判）
         prev_anxiety = exam_state["current_anxiety"]

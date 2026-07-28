@@ -1,60 +1,10 @@
-import json
 from typing import List, Dict
-from app.services.llm_adapter import llm_client
 from app.core.logger import logger
 
 class ScorerAgent:
     """
-    负责对整段模拟对话进行多维度评分的 Agent (评)
+    负责生成学员多维能力画像的 Agent (评)
     """
-    async def score_conversation(self, chat_history: List[Dict[str, str]], trace_id: str = "N/A") -> dict:
-        """
-        对整段对话进行总结性评分
-        """
-        logger.bind(trace_id=trace_id).info("ScorerAgent 正在对整段对话进行评分")
-        
-        # 将对话历史转换为易读文本
-        history_text = ""
-        for msg in chat_history:
-            role_name = "【考生】" if msg["role"] == "trainee" else "【客户】"
-            history_text += f"{role_name}: {msg['content']}\n"
-            
-        prompt = f"""
-请作为专业的质检员，对以下一段银行客服（考生）与客户的模拟对话进行多维度评分。
-
-对话记录：
-{history_text}
-
-请严格按照以下 JSON 格式输出，不要包含多余文本：
-{{
-    "overall_score": 0-100的整数,
-    "score_details": {{
-        "accuracy": 0-100的整数 (业务准确性：解答是否正确无误),
-        "service_tone": 0-100的整数 (服务态度：用词是否礼貌规范),
-        "compliance": 0-100的整数 (制度合规性：有无违规操作或违规承诺),
-        "empathy": 0-100的整数 (情绪安抚能力：是否接住并安抚了客户的负面情绪),
-        "dialogue_control": 0-100的整数 (沟通控场能力：偏题时能否高效引导回主线并解决问题)
-    }},
-    "feedback": "整体综合评价与改进建议"
-}}
-"""
-        messages = [{"role": "user", "content": prompt}]
-        response = await llm_client.async_chat_completion(messages, trace_id=trace_id)
-        
-        try:
-            import re
-            # 过滤掉可能的 <think> 标签内容，并提取 JSON 块
-            content = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL)
-            match = re.search(r'\{.*\}', content, re.DOTALL)
-            if match:
-                clean_str = match.group(0)
-            else:
-                clean_str = content.strip().strip("```json").strip("```")
-            return json.loads(clean_str)
-        except Exception as e:
-            logger.bind(trace_id=trace_id).error(f"ScorerAgent 解析评分结果失败: {e}\n原文: {response}")
-            raise Exception("对话评分解析失败")
-
     def generate_capability_portrait(self, exam_history: list, practice_history: list, feynman_progress: dict, pomodoro_stats: dict, weakness_stats: dict, trace_id: str = "N/A") -> dict:
         """
         生成多维能力画像：知识掌握度、学习节奏感、实战能力、错误修正力

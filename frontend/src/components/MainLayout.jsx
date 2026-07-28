@@ -1,6 +1,6 @@
 import React from 'react'
 import { Layout, Menu, Typography, Avatar, Space } from 'antd'
-import { UserOutlined, SettingOutlined, BankOutlined, RobotOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { UserOutlined, SettingOutlined, BankOutlined, RobotOutlined, ThunderboltOutlined, MessageOutlined, ApiOutlined } from '@ant-design/icons'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 
 const { Header, Sider, Content } = Layout
@@ -50,7 +50,12 @@ const MainLayout = () => {
           </div>
           <Menu
             mode="inline"
-            selectedKeys={[location.pathname.includes('admin') ? 'admin' : location.pathname.includes('dynamic-exam') ? 'dynamic-exam' : 'trainee']}
+            selectedKeys={[
+              location.pathname.includes('coze-practice-admin') ? 'coze-practice-admin' :
+              location.pathname.includes('coze-practice') ? 'coze-practice' :
+              location.pathname.includes('admin') ? 'admin' :
+              location.pathname.includes('dynamic-exam') ? 'dynamic-exam' : 'trainee'
+            ]}
             style={{ borderRight: 0, padding: '8px' }}
             items={[
               {
@@ -68,10 +73,24 @@ const MainLayout = () => {
                 style: { borderRadius: 8, marginBottom: 4 }
               },
               {
+                key: 'coze-practice',
+                icon: <MessageOutlined />,
+                label: '情景陪练 (Coze)',
+                onClick: () => navigate('/coze-practice'),
+                style: { borderRadius: 8, marginBottom: 4 }
+              },
+              {
                 key: 'admin',
                 icon: <SettingOutlined />,
                 label: '管理员端 (配置)',
                 onClick: () => navigate('/admin'),
+                style: { borderRadius: 8, marginBottom: 4 }
+              },
+              {
+                key: 'coze-practice-admin',
+                icon: <ApiOutlined />,
+                label: 'Coze 工作流管理',
+                onClick: () => navigate('/coze-practice-admin'),
                 style: { borderRadius: 8 }
               }
             ]}

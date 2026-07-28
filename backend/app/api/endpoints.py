@@ -59,13 +59,10 @@ async def health_check():
 
 class ChatRequest(BaseModel):
     message: str
-    agent_type: str = "doc" # "doc", "quiz", "persona"
+    agent_type: str = "doc" # "doc", "quiz"
     mode: str = "normal" # "normal", "feynman"
-    history: list = [] # 用于 persona/doc feynman 的历史记录
+    history: list = [] # 用于 doc feynman 的历史记录
     question_id: str | None = None # 用于 quiz agent 关联题目
-
-class ScoreRequest(BaseModel):
-    history: List[Dict[str, str]] # [{'role': 'trainee', 'content': '...'}, ...]
 
 @router.post("/chat")
 async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
@@ -163,102 +160,9 @@ __WEAKNESS__{{"score": 75, "missed_points": ["未提及的踩分点1", "踩分�
 
             return StreamingResponse(quiz_generator(), media_type="text/plain")
             
-        elif request.agent_type == "persona":
-            # 升级版：加入场景压迫感与情绪驱动的话题跳转机制
-            system_prompt = """你正在超市收银台排队结账，后面排着长队，但你的手机银行转账一直失败。
-你正在和银行客服（现在的考生）沟通转账问题。你的初始状态是“急切”。
-请注意以下行为逻辑：
-1. 每次回复前，请先评估客服的回答：如果客服打官腔（如“请您理解”、“这是规定”），或者让你做复杂的操作（如去网点、提供繁杂证明），你的“耐心值”就会耗尽。
-2. 如果客服在两轮对话内没有给你一个立刻能操作的解决方案，或者你的耐心值耗尽，你会因为后面顾客的催促感到极其尴尬和暴躁。
-3. 这时，你必须自然地转移话题！放弃追究转账失败的原因，转而提出一个更简单直接的诉求，例如：“后面人都等着呢！行了行了我不转了，你赶紧帮我看看我这张卡还能不能直接绑微信刷码？”或者“那你帮我查查余额，我看看够不够取现金！”
-4. 转移话题后，顺着新话题聊，绝不再回到转账失败的问题上。
-请完全沉浸在这个场景中，表现得像一个真实、缺乏耐心的真人。你确信对方是真实客服，不要怀疑其身份。"""
-            # 把当前用户的话加入历史
-            history = request.history + [{"role": "trainee", "content": request.message}]
-            
-            async def persona_generator():
-                async for chunk in persona_agent.generate_reply_stream(system_prompt, history):
-                    yield chunk
-                    
-            return StreamingResponse(persona_generator(), media_type="text/plain")
-            
         else:
             raise HTTPException(status_code=400, detail="未知的 Agent 类型")
-            
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/score")
-async def score_conversation(request: ScoreRequest, db: AsyncSession = Depends(get_db)):
-    try:
-        if not request.history:
-            raise HTTPException(status_code=400, detail="历史记录为空")
-            
-        # 1. 调用 scorer_agent 获取评分报告
-        score_result = await scorer_agent.score_conversation(request.history)
-        
-        # 2. 存入数据库 - 考试记录
-        exam_id = str(uuid.uuid4())
-        
-        # 为了避免 MySQL 的外键约束报错，我们先确保引用的 mock_user 和 default_persona 存在
-        # 在真实应用中这些应该是通过注册和配置功能创建好的
-        mock_user = await db.get(User, "mock_user")
-        if not mock_user:
-            db.add(User(id="mock_user", username="测试用户", hashed_password="xxx"))
-            
-        mock_persona = await db.get(Persona, "default_persona")
-        if not mock_persona:
-            db.add(Persona(id="default_persona", name="默认急躁客户", system_prompt="..."))
-            
-        await db.flush() # 提前刷入数据库，使得下面的外键能引用到
-        
-        record = ExamRecord(
-            id=exam_id,
-            trainee_id="mock_user", # v1.0 简化，暂时固定用户
-            persona_id="default_persona",
-            overall_score=score_result.get("overall_score", 0),
-            score_details=score_result.get("score_details", {}),
-            feedback=score_result.get("feedback", "")
-        )
-        db.add(record)
-        await db.flush() # 确保 exam_record 存在，使得 chat_history 的 exam_id 能引用到
-
-        # 提取考试低分维度，存入弱点表
-        score_details = score_result.get("score_details", {})
-        dimension_labels = {
-            "accuracy": "业务准确性",
-            "service_tone": "服务态度",
-            "compliance": "制度合规性",
-            "empathy": "情绪安抚",
-            "dialogue_control": "沟通控场"
-        }
-        for dim_key, dim_label in dimension_labels.items():
-            dim_score = score_details.get(dim_key, 100)
-            if dim_score < 75:
-                weakness = UserWeakness(
-                    id=str(uuid.uuid4()),
-                    trainee_id="mock_user",
-                    category="模拟考试",
-                    weak_points=[f"{dim_label}（{dim_score}分）"],
-                    score=dim_score,
-                    source_type="exam",
-                    source_id=exam_id,
-                    resolved=False
-                )
-                db.add(weakness)
-        
-        # 3. 存入数据库 - 聊天历史
-        for msg in request.history:
-            chat_record = ChatHistory(
-                exam_id=exam_id,
-                role=msg.get("role", "unknown"),
-                content=msg.get("content", "")
-            )
-            db.add(chat_record)
-            
-        await db.commit()
-        return score_result
-        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

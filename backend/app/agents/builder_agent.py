@@ -69,6 +69,39 @@ class BuilderAgent:
             logger.bind(trace_id=trace_id).error(f"Builder Agent 解析失败: {e}")
             raise e
             
+    async def draft_knowledge_for_weak_point(self, business_line: str, point: str, keywords: list,
+                                              hit_rate: float, trace_id: str = "N/A") -> Dict[str, Any]:
+        """
+        V5.0 自适应知识进化引擎 · 阶段二：
+        针对全员命中率偏低的踩分点，起草一条"高频易错点讲解"知识内容草稿。
+        只生成草稿，不直接入库，需管理员审核确认。
+        """
+        prompt = f"""你是一位专业的银行客服培训教研专家。
+系统统计发现：在「{business_line}」业务线的「{point}」这个考核点上，全体学员的平均命中率只有 {hit_rate}%，
+说明这是一个学员普遍容易讲错/讲不清楚的知识点，可能是现有知识库对这一点的讲解不够清晰。
+
+该考核点相关的关键词：{', '.join(keywords)}
+
+请你起草一条补充知识内容，帮助学员讲清楚这个点。要求：
+1. 标题简洁明确
+2. 正文用客服话术讲清楚"该怎么答"，包含具体的操作步骤或规范表述，不要空泛的原则性描述
+3. 正文控制在 150-300 字
+
+请严格输出以下 JSON（不要包含多余文本和```标记）：
+{{"title": "标题", "content": "正文内容", "keywords": ["关键词1", "关键词2", "关键词3"]}}
+"""
+        messages = [{"role": "user", "content": prompt}]
+        try:
+            response = await llm_client.async_chat_completion(messages, trace_id=trace_id, model="chat")
+            json_str = self._extract_json_from_text(response)
+            data = json.loads(json_str)
+            if not data.get("title") or not data.get("content"):
+                raise ValueError("起草结果缺少标题或正文")
+            return data
+        except Exception as e:
+            logger.bind(trace_id=trace_id).error(f"起草薄弱知识点草稿失败（{business_line}/{point}）: {e}")
+            raise
+
     def _extract_json_from_text(self, text: str) -> str:
         # Match ```json ... ``` or just find the first { and last }
         match = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL)

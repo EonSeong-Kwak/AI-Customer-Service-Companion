@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
-import { Typography, Card, Tabs, Table, Button, Space, Modal, Form, Input, message, Popconfirm, Tag, Upload, Statistic, Row, Col, Select, Drawer, Divider } from 'antd'
+import React, { useState, useEffect, useRef } from 'react'
+import { Graph as G6Graph } from '@antv/g6'
+import { Typography, Card, Tabs, Table, Button, Space, Modal, Form, Input, message, Popconfirm, Tag, Upload, Statistic, Row, Col, Select, Drawer, Divider, Checkbox } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, DashboardOutlined, FileTextOutlined, WarningOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 import axios from 'axios'
@@ -126,8 +127,106 @@ const AdminDashboard = () => {
   const [relationForm] = Form.useForm()
   const [graphVisible, setGraphVisible] = useState(false)
   const [graphData, setGraphData] = useState({ nodes: [], edges: [] })
+  const graphContainerRef = useRef(null)
+  const graphInstanceRef = useRef(null)
   const [nodeDetailVisible, setNodeDetailVisible] = useState(false)
   const [nodeDetail, setNodeDetail] = useState(null)
+  const [showIsolatedNodes, setShowIsolatedNodes] = useState(false)
+
+  // 从节点原始 label（如"【客户问题】未成年人忘记银行卡密码怎么重..."）里提取一段简短、去掉方括号前缀的显示文本
+  const shortNodeLabel = (label, id) => {
+    const cleaned = (label || '').replace(/【[^】]*】/g, '').trim()
+    const text = cleaned || id || ''
+    return text.length > 8 ? text.slice(0, 8) + '…' : text
+  }
+
+  // 知识图谱可视化：graphVisible/graphData/showIsolatedNodes 变化时用 G6 渲染力导向图（拖拽、缩放、按业务线着色）
+  useEffect(() => {
+    if (!graphVisible || !graphContainerRef.current) return
+    if (graphData.nodes.length === 0) return
+
+    const MAX_NODES = 150
+    const allNodeIds = new Set(graphData.nodes.slice(0, MAX_NODES).map(n => n.id))
+    const validEdges = graphData.edges.filter(e => allNodeIds.has(e.source) && allNodeIds.has(e.target))
+
+    // 默认只展示"有关联的节点"，避免大量孤立节点让图看起来杂乱；可通过开关展示全部
+    const connectedIds = new Set(validEdges.flatMap(e => [e.source, e.target]))
+    const visibleNodes = graphData.nodes
+      .slice(0, MAX_NODES)
+      .filter(n => showIsolatedNodes || connectedIds.has(n.id))
+
+    const g6Data = {
+      nodes: visibleNodes.map(n => ({
+        id: n.id,
+        data: { label: n.label || n.id, business_line: n.business_line || '未分类' }
+      })),
+      edges: validEdges.map((e, i) => ({
+        id: `edge-${i}`,
+        source: e.source,
+        target: e.target,
+        data: { relation_type: e.relation_type, weight: e.weight || 1 }
+      }))
+    }
+
+    if (g6Data.nodes.length === 0) {
+      graphContainerRef.current.innerHTML = ''
+      return
+    }
+
+    const graph = new G6Graph({
+      container: graphContainerRef.current,
+      autoFit: 'view',
+      data: g6Data,
+      node: {
+        style: {
+          size: 24,
+          labelText: (d) => shortNodeLabel(d.data.label, d.id),
+          labelFontSize: 10,
+          labelFill: '#333',
+          labelBackground: true,
+          labelBackgroundFill: '#fff',
+          labelBackgroundOpacity: 0.75,
+          labelPadding: [1, 3],
+          labelMaxWidth: 80,
+        },
+        palette: { type: 'group', field: (d) => d.data.business_line },
+      },
+      edge: {
+        style: {
+          stroke: '#8c8c8c',
+          lineWidth: (d) => Math.max(1, (d.data.weight || 1) * 2),
+          lineDash: (d) => (d.data.relation_type === 'contradicts' ? [4, 2] : null),
+          endArrow: false,
+        },
+      },
+      layout: {
+        type: 'force',
+        preventOverlap: true,
+        nodeSize: 32,
+        linkDistance: 90,
+      },
+      behaviors: ['drag-canvas', 'zoom-canvas', 'drag-element', 'hover-activate'],
+      plugins: [
+        {
+          type: 'tooltip',
+          getContent: (_e, items) => {
+            const item = items?.[0]
+            if (!item) return ''
+            return `<div style="max-width:240px;font-size:12px;">
+              <strong>${item.id}</strong>（${item.data.business_line}）<br/>${item.data.label}
+            </div>`
+          },
+        },
+      ],
+    })
+    graph.render()
+    graphInstanceRef.current = graph
+
+    return () => {
+      graph.destroy()
+      graphInstanceRef.current = null
+    }
+  }, [graphVisible, graphData, showIsolatedNodes])
 
   // 知识库管理函数
   const fetchKbNodes = async () => {
@@ -240,6 +339,7 @@ const AdminDashboard = () => {
       setRelationModalVisible(false)
       relationForm.resetFields()
       fetchKbRelations()
+      if (graphVisible) fetchKnowledgeGraph()
     } catch (err) {
       message.error('创建失败')
     }
@@ -250,6 +350,7 @@ const AdminDashboard = () => {
       await axios.delete(`${API_BASE}/knowledge-relations/${id}`)
       message.success('关系已删除')
       fetchKbRelations()
+      if (graphVisible) fetchKnowledgeGraph()
     } catch (err) {
       message.error('删除失败')
     }
@@ -261,6 +362,7 @@ const AdminDashboard = () => {
       const res = await axios.post(`${API_BASE}/knowledge-graph/auto-build`, {}, { timeout: 300000 })
       message.success(`智能构建完成：${res.data.business_lines} 个业务线，共 ${res.data.total_relations} 条关系`)
       fetchKbRelations()
+      if (graphVisible) fetchKnowledgeGraph()
     } catch (err) {
       message.error('智能构建失败: ' + err.message)
     } finally {
@@ -932,71 +1034,29 @@ const AdminDashboard = () => {
 
                   <Card title={<Space>知识图谱关系 <Button size="small" type="link" onClick={() => { setGraphVisible(!graphVisible); if(!graphVisible) fetchKnowledgeGraph() }}>{graphVisible ? '收起图谱' : '查看图谱'}</Button></Space>} size="small" style={{ marginTop: 16 }}>
                     {graphVisible && (
-                      <div style={{ border: '1px solid #d9d9d9', borderRadius: 4, padding: 16, marginBottom: 16, overflow: 'auto', maxHeight: 400 }}>
+                      <div style={{ border: '1px solid #d9d9d9', borderRadius: 4, padding: 16, marginBottom: 16 }}>
                         {graphData.nodes.length === 0 ? (
                           <Typography.Text type="secondary">暂无图谱数据</Typography.Text>
-                        ) : (
-                          <svg width="100%" height="350" style={{ background: '#fafafa' }}>
-                            {(() => {
-                              const nodes = graphData.nodes.slice(0, 50)
-                              const edges = graphData.edges
-                              const cx = 400, cy = 175, r = 130
-                              const blGroups = {}
-                              nodes.forEach(n => {
-                                const bl = n.business_line || '未分类'
-                                if (!blGroups[bl]) blGroups[bl] = []
-                                blGroups[bl].push(n)
-                              })
-                              const bls = Object.keys(blGroups)
-                              const positions = {}
-                              bls.forEach((bl, bi) => {
-                                const baseAngle = (bi / bls.length) * 2 * Math.PI
-                                blGroups[bl].forEach((n, ni) => {
-                                  const offset = ni * 25
-                                  const angle = baseAngle + (ni - blGroups[bl].length/2) * 0.15
-                                  positions[n.id] = {
-                                    x: cx + (r + offset * 0.3) * Math.cos(angle),
-                                    y: cy + (r + offset * 0.3) * Math.sin(angle)
-                                  }
-                                })
-                              })
-                              const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96']
-                              const blColors = {}
-                              bls.forEach((bl, i) => blColors[bl] = colors[i % colors.length])
-
-                              return (
-                                <>
-                                  {edges.filter(e => positions[e.source] && positions[e.target]).map((e, i) => (
-                                    <line key={i} x1={positions[e.source].x} y1={positions[e.source].y}
-                                      x2={positions[e.target].x} y2={positions[e.target].y}
-                                      stroke="#bbb" strokeWidth={e.weight * 2}
-                                      strokeDasharray={e.relation_type === 'contradicts' ? '4 2' : 'none'}
-                                    />
-                                  ))}
-                                  {nodes.map(n => (
-                                    <g key={n.id}>
-                                      <circle cx={positions[n.id].x} cy={positions[n.id].y} r="12"
-                                        fill={blColors[n.business_line || '未分类']} opacity="0.8" />
-                                      <text x={positions[n.id].x} y={positions[n.id].y + 4} textAnchor="middle"
-                                        fontSize="8" fill="#fff" fontWeight="bold">
-                                        {n.id.replace('kb_', '')}
-                                      </text>
-                                      <title>{n.id}: {n.label}</title>
-                                    </g>
-                                  ))}
-                                  {bls.map((bl, i) => (
-                                    <g key={bl}>
-                                      <circle cx={10 + i * 100} cy={15} r="6" fill={blColors[bl]} />
-                                      <text x={20 + i * 100} y={19} fontSize="10" fill="#333">{bl}</text>
-                                    </g>
-                                  ))}
-                                </>
-                              )
-                            })()}
-                          </svg>
-                        )}
+                        ) : (() => {
+                          const connected = new Set(graphData.edges.flatMap(e => [e.source, e.target]))
+                          const isolatedCount = graphData.nodes.filter(n => !connected.has(n.id)).length
+                          return (
+                            <>
+                              <div style={{ marginBottom: 8 }}>
+                                <Checkbox checked={showIsolatedNodes} onChange={(e) => setShowIsolatedNodes(e.target.checked)}>
+                                  显示无关联节点（{isolatedCount} 个）
+                                </Checkbox>
+                              </div>
+                              <div
+                                ref={graphContainerRef}
+                                style={{ width: '100%', height: 450, background: '#fafafa', borderRadius: 4 }}
+                              />
+                            </>
+                          )
+                        })()}
                         <Typography.Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
-                          实线=相关/扩展/前置，虚线=矛盾 | 圆圈颜色=业务线 | 悬停看节点ID
+                          实线=相关/扩展/前置，虚线=矛盾 | 圆圈颜色=业务线（同色为同一业务线） | 可拖拽节点、滚轮缩放、悬停看完整内容
+                          {graphData.nodes.length > 150 && `（节点较多，仅展示前 150 个）`}
                         </Typography.Text>
                       </div>
                     )}
@@ -1312,6 +1372,11 @@ const AdminDashboard = () => {
               key: 'projects',
               label: '项目场景配置 (PBL)',
               children: <ProjectScenariosTab />
+            },
+            {
+              key: 'key-point-stats',
+              label: <span><WarningOutlined /> 群体薄弱知识点</span>,
+              children: <KeyPointStatsTab />
             }
           ]}
         />
@@ -1561,12 +1626,246 @@ const AdminDashboard = () => {
 }
 
 
+// ===== V5.0: 自适应知识进化引擎 · 阶段一 —— 踩分点命中率统计子组件 =====
+const KeyPointStatsTab = () => {
+  const [data, setData] = useState({ total_key_points: 0, reliable_count: 0, weakest_points: [], insufficient_sample_points: [] })
+  const [loading, setLoading] = useState(false)
+  const [scanning, setScanning] = useState(false)
+
+  const [drafts, setDrafts] = useState([])
+  const [draftsLoading, setDraftsLoading] = useState(false)
+  const [editingDraft, setEditingDraft] = useState(null)
+  const [draftForm] = Form.useForm()
+  const [draftActionLoading, setDraftActionLoading] = useState(null) // draft id currently being approved/rejected
+
+  const fetchStats = async () => {
+    setLoading(true)
+    try {
+      const res = await axios.get(`${API_BASE}/key-points/stats`, { params: { min_samples: 3 } })
+      setData(res.data)
+    } catch (e) {
+      message.error('加载踩分点统计失败: ' + (e.response?.data?.detail || e.message))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchDrafts = async () => {
+    setDraftsLoading(true)
+    try {
+      const res = await axios.get(`${API_BASE}/knowledge-drafts`)
+      setDrafts(res.data || [])
+    } catch (e) {
+      message.error('加载知识草稿失败: ' + (e.response?.data?.detail || e.message))
+    } finally {
+      setDraftsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchStats()
+    fetchDrafts()
+  }, [])
+
+  const handleScan = async () => {
+    setScanning(true)
+    try {
+      const res = await axios.post(`${API_BASE}/knowledge-drafts/scan`)
+      if (res.data.generated > 0) {
+        message.success(`成功生成 ${res.data.generated} 条知识草稿：${res.data.generated_points.join('、')}`)
+      } else {
+        message.info(res.data.message || '暂无符合条件的薄弱知识点')
+      }
+      if (res.data.failed?.length > 0) {
+        message.warning(`${res.data.failed.length} 条起草失败，请稍后重试`)
+      }
+      fetchDrafts()
+    } catch (e) {
+      message.error('扫描生成失败: ' + (e.response?.data?.detail || e.message))
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  const openEditDraft = (draft) => {
+    setEditingDraft(draft)
+    draftForm.setFieldsValue({
+      title: draft.title,
+      content: draft.content,
+      keywords_text: (draft.keywords || []).join('、')
+    })
+  }
+
+  const handleSaveDraft = async () => {
+    try {
+      const values = await draftForm.validateFields()
+      await axios.put(`${API_BASE}/knowledge-drafts/${editingDraft.id}`, {
+        title: values.title,
+        content: values.content,
+        keywords: values.keywords_text.split(/[、,，]/).map(k => k.trim()).filter(Boolean)
+      })
+      message.success('草稿已更新')
+      setEditingDraft(null)
+      fetchDrafts()
+    } catch (e) {
+      if (e.response) message.error('保存失败: ' + (e.response?.data?.detail || e.message))
+    }
+  }
+
+  const handleApprove = async (draft) => {
+    setDraftActionLoading(draft.id)
+    try {
+      await axios.post(`${API_BASE}/knowledge-drafts/${draft.id}/approve`)
+      message.success(`已确认入库，知识库新增节点 ${draft.title}`)
+      fetchDrafts()
+    } catch (e) {
+      message.error('入库失败: ' + (e.response?.data?.detail || e.message))
+    } finally {
+      setDraftActionLoading(null)
+    }
+  }
+
+  const handleReject = async (draft) => {
+    setDraftActionLoading(draft.id)
+    try {
+      await axios.post(`${API_BASE}/knowledge-drafts/${draft.id}/reject`)
+      message.info('已驳回')
+      fetchDrafts()
+    } catch (e) {
+      message.error('驳回失败: ' + (e.response?.data?.detail || e.message))
+    } finally {
+      setDraftActionLoading(null)
+    }
+  }
+
+  const hitRateColor = (rate) => rate >= 70 ? '#52c41a' : rate >= 40 ? '#faad14' : '#f5222d'
+  const statusTag = (status) => {
+    if (status === 'approved') return <Tag color="success">已入库</Tag>
+    if (status === 'rejected') return <Tag color="default">已驳回</Tag>
+    return <Tag color="processing">待审核</Tag>
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Space size="large">
+          <Statistic title="累计踩分点总数" value={data.total_key_points} />
+          <Statistic title="有效统计样本（≥3人次）" value={data.reliable_count} />
+          <Statistic title="样本不足（暂不纳入排序）" value={data.insufficient_sample_points?.length || 0} />
+        </Space>
+        <Button onClick={fetchStats} loading={loading}>刷新</Button>
+      </div>
+      <Typography.Paragraph type="secondary">
+        统计全体学员在各业务线踩分点上的命中率，命中率越低排越前，代表这是"大家普遍容易答错"的群体性薄弱知识点，
+        可作为知识库补强、培训重点的依据。
+      </Typography.Paragraph>
+      <Table
+        dataSource={data.weakest_points}
+        rowKey="id"
+        loading={loading}
+        pagination={{ pageSize: 10 }}
+        columns={[
+          { title: '业务线', dataIndex: 'business_line', key: 'business_line', width: 140, render: v => <Tag color="blue">{v}</Tag> },
+          { title: '踩分点', dataIndex: 'point', key: 'point' },
+          { title: '关键词', dataIndex: 'keywords', key: 'keywords', render: kws => (kws || []).slice(0, 4).map(k => <Tag key={k}>{k}</Tag>) },
+          {
+            title: '命中率', dataIndex: 'hit_rate', key: 'hit_rate', width: 200,
+            render: (rate, row) => (
+              <span>
+                <span style={{ color: hitRateColor(rate), fontWeight: 700 }}>{rate}%</span>
+                <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                  （{row.hit_count} / {row.total_count} 人次）
+                </Typography.Text>
+              </span>
+            )
+          },
+          { title: '权重', dataIndex: 'weight', key: 'weight', width: 80 },
+        ]}
+      />
+
+      <Divider />
+
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography.Title level={5} style={{ margin: 0 }}>
+          <ThunderboltOutlined /> 待审核知识草稿
+        </Typography.Title>
+        <Space>
+          <Button onClick={fetchDrafts} loading={draftsLoading}>刷新</Button>
+          <Button type="primary" icon={<ThunderboltOutlined />} loading={scanning} onClick={handleScan}>
+            扫描并生成知识草稿
+          </Button>
+        </Space>
+      </div>
+      <Typography.Paragraph type="secondary">
+        点击"扫描并生成知识草稿"，系统会自动找出命中率低于 40%、且样本量足够（≥5人次）、还没起草过的薄弱踩分点，
+        调用 AI 起草补充知识内容。生成的草稿需要你确认后才会真正写入知识库。
+      </Typography.Paragraph>
+      <Table
+        dataSource={drafts}
+        rowKey="id"
+        loading={draftsLoading}
+        pagination={{ pageSize: 5 }}
+        columns={[
+          { title: '标题', dataIndex: 'title', key: 'title', width: 200 },
+          {
+            title: '来源', key: 'source', width: 220,
+            render: (_, row) => (
+              <span style={{ fontSize: 12 }}>
+                <Tag color="blue">{row.business_line}</Tag>{row.source_point}
+                <br />
+                <Typography.Text type="secondary">命中率 {row.source_hit_rate}%</Typography.Text>
+              </span>
+            )
+          },
+          { title: '正文预览', dataIndex: 'content', key: 'content', render: v => <span style={{ fontSize: 12 }}>{(v || '').slice(0, 60)}...</span> },
+          { title: '状态', dataIndex: 'status', key: 'status', width: 90, render: statusTag },
+          {
+            title: '操作', key: 'actions', width: 200,
+            render: (_, row) => row.status === 'pending' ? (
+              <Space size="small">
+                <Button size="small" onClick={() => openEditDraft(row)}>编辑</Button>
+                <Button size="small" type="primary" loading={draftActionLoading === row.id} onClick={() => handleApprove(row)}>确认入库</Button>
+                <Button size="small" danger loading={draftActionLoading === row.id} onClick={() => handleReject(row)}>驳回</Button>
+              </Space>
+            ) : (
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {row.status === 'approved' ? `已生成节点 ${row.node_id}` : '已驳回，不再处理'}
+              </Typography.Text>
+            )
+          },
+        ]}
+      />
+
+      <Modal
+        title="编辑知识草稿"
+        open={!!editingDraft}
+        onOk={handleSaveDraft}
+        onCancel={() => setEditingDraft(null)}
+        okText="保存"
+      >
+        <Form form={draftForm} layout="vertical">
+          <Form.Item name="title" label="标题" rules={[{ required: true, message: '请输入标题' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="content" label="正文" rules={[{ required: true, message: '请输入正文' }]}>
+            <TextArea rows={6} />
+          </Form.Item>
+          <Form.Item name="keywords_text" label="关键词（用、或,分隔）">
+            <Input />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  )
+}
+
 // ===== V3.4: 项目场景配置（PBL）子组件 =====
 const ProjectScenariosTab = () => {
   const [scenarios, setScenarios] = useState([])
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
   const [editingScenario, setEditingScenario] = useState(null)
+  const [businessLines, setBusinessLines] = useState([])
   const [form] = Form.useForm()
 
   const fetchScenarios = async () => {
@@ -1581,8 +1880,18 @@ const ProjectScenariosTab = () => {
     }
   }
 
+  const fetchBusinessLines = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/prewarm/status`)
+      setBusinessLines(res.data?.business_lines || [])
+    } catch (e) {
+      // 拿不到真实业务线列表时不报错打扰，下拉框允许手动输入兜底
+    }
+  }
+
   useEffect(() => {
     fetchScenarios()
+    fetchBusinessLines()
   }, [])
 
   const openModal = (scenario = null) => {
@@ -1715,8 +2024,15 @@ const ProjectScenariosTab = () => {
           </Form.Item>
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="business_line" label="关联业务线">
-                <Input placeholder="如：信用卡挂失" />
+              <Form.Item name="business_line" label="关联业务线" rules={[{ required: true, message: '请选择关联业务线' }]}>
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder="选择系统已识别的业务线"
+                  options={businessLines.map(bl => ({ label: bl, value: bl }))}
+                  filterOption={(input, option) => (option?.label ?? '').includes(input)}
+                  notFoundContent="暂无数据，请先在顶部点击「重新预热业务线」"
+                />
               </Form.Item>
             </Col>
             <Col span={8}>

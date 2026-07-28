@@ -2,15 +2,18 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import List, Optional
+from datetime import datetime
 import uuid
 
 from app.core.database import get_db
 from app.models import (
     Persona, Question, ExamRecord, PracticeRecord, UserWeakness,
-    ExamPaper, ExamAssignment, User, ProjectScenario, IntentDefinition
+    ExamPaper, ExamAssignment, User, ProjectScenario, IntentDefinition,
+    BusinessLineKeyPoint, KnowledgeDraft
 )
 from app.services.external_kb import external_kb
 from app.services.retrieval_pipeline import retrieval_pipeline
+from app.agents.builder_agent import builder_agent
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -1189,3 +1192,203 @@ async def delete_intent_definition(intent_id: str, db: AsyncSession = Depends(ge
     await db.delete(existing)
     await db.commit()
     return {"message": "已删除"}
+
+
+# ==========================================
+# V5.0 自适应知识进化引擎 · 阶段一：踩分点命中率统计
+# ==========================================
+
+@router.get("/key-points/stats")
+async def get_key_point_stats(min_samples: int = 3, db: AsyncSession = Depends(get_db)):
+    """
+    获取全体学员在各业务线踩分点上的命中率统计。
+    按命中率从低到高排序（最薄弱的排最前面），min_samples 过滤掉样本量太少、
+    统计上还不够可靠的踩分点（默认至少 3 人次遇到过才纳入排序）。
+    """
+    result = await db.execute(select(BusinessLineKeyPoint))
+    rows = result.scalars().all()
+
+    stats = []
+    for r in rows:
+        hit_rate = (r.hit_count / r.total_count) if r.total_count > 0 else None
+        stats.append({
+            "id": r.id,
+            "business_line": r.business_line,
+            "point": r.point,
+            "weight": r.weight,
+            "keywords": r.keywords or [],
+            "hit_count": r.hit_count,
+            "total_count": r.total_count,
+            "hit_rate": round(hit_rate * 100, 1) if hit_rate is not None else None,
+        })
+
+    # 有足够样本量的排前面（按命中率升序，最薄弱优先），样本不足的排最后
+    reliable = sorted(
+        [s for s in stats if s["total_count"] >= min_samples],
+        key=lambda s: s["hit_rate"]
+    )
+    unreliable = [s for s in stats if s["total_count"] < min_samples]
+
+    return {
+        "total_key_points": len(stats),
+        "reliable_count": len(reliable),
+        "weakest_points": reliable,
+        "insufficient_sample_points": unreliable,
+    }
+
+
+# ==========================================
+# V5.0 自适应知识进化引擎 · 阶段二：AI 起草知识草稿 + 人工审核入库
+# ==========================================
+
+class KnowledgeDraftUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    keywords: Optional[List[str]] = None
+
+
+@router.post("/knowledge-drafts/scan")
+async def scan_and_draft_weak_points(
+    hit_rate_threshold: float = 40.0,
+    min_samples: int = 5,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    扫描全员命中率低于阈值、样本量足够、且尚未起草过草稿的踩分点，
+    调用 AI 逐条起草知识补充内容，存为待审核草稿（不会自动入库）。
+    """
+    result = await db.execute(select(BusinessLineKeyPoint))
+    all_points = result.scalars().all()
+
+    # 已经起草过（无论 pending/approved/rejected）的踩分点不重复生成
+    drafted_result = await db.execute(select(KnowledgeDraft.source_key_point_id))
+    already_drafted_ids = {row[0] for row in drafted_result.all() if row[0]}
+
+    candidates = []
+    for p in all_points:
+        if p.total_count < min_samples or p.id in already_drafted_ids:
+            continue
+        hit_rate = (p.hit_count / p.total_count) * 100
+        if hit_rate < hit_rate_threshold:
+            candidates.append((p, hit_rate))
+
+    if not candidates:
+        return {"generated": 0, "message": "没有符合条件的薄弱踩分点（可能是样本不足，或已经全部生成过草稿）"}
+
+    generated = []
+    failed = []
+    for point, hit_rate in candidates:
+        try:
+            draft_data = await builder_agent.draft_knowledge_for_weak_point(
+                business_line=point.business_line,
+                point=point.point,
+                keywords=point.keywords or [],
+                hit_rate=round(hit_rate, 1),
+                trace_id=f"draft-scan-{point.id}"
+            )
+            draft = KnowledgeDraft(
+                id=str(uuid.uuid4()),
+                source_key_point_id=point.id,
+                business_line=point.business_line,
+                source_point=point.point,
+                source_hit_rate=round(hit_rate, 1),
+                title=draft_data["title"],
+                content=draft_data["content"],
+                keywords=draft_data.get("keywords", []),
+                status="pending"
+            )
+            db.add(draft)
+            generated.append(point.point)
+        except Exception as e:
+            failed.append({"point": point.point, "error": str(e)})
+
+    await db.commit()
+    return {
+        "generated": len(generated),
+        "generated_points": generated,
+        "failed": failed,
+        "scanned_candidates": len(candidates),
+    }
+
+
+@router.get("/knowledge-drafts")
+async def list_knowledge_drafts(status: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+    """获取知识草稿列表，可按状态筛选（pending/approved/rejected），默认全部"""
+    stmt = select(KnowledgeDraft).order_by(KnowledgeDraft.created_at.desc())
+    if status:
+        stmt = stmt.where(KnowledgeDraft.status == status)
+    result = await db.execute(stmt)
+    drafts = result.scalars().all()
+    return [
+        {
+            "id": d.id,
+            "business_line": d.business_line,
+            "source_point": d.source_point,
+            "source_hit_rate": d.source_hit_rate,
+            "title": d.title,
+            "content": d.content,
+            "keywords": d.keywords or [],
+            "status": d.status,
+            "node_id": d.node_id,
+            "created_at": d.created_at.isoformat() if d.created_at else None,
+            "reviewed_at": d.reviewed_at.isoformat() if d.reviewed_at else None,
+        }
+        for d in drafts
+    ]
+
+
+@router.put("/knowledge-drafts/{draft_id}")
+async def update_knowledge_draft(draft_id: str, payload: KnowledgeDraftUpdate, db: AsyncSession = Depends(get_db)):
+    """编辑草稿内容（审核前可修改标题/正文/关键词）"""
+    draft = await db.get(KnowledgeDraft, draft_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="草稿不存在")
+    if draft.status != "pending":
+        raise HTTPException(status_code=400, detail=f"草稿已处于「{draft.status}」状态，不能再编辑")
+    if payload.title is not None:
+        draft.title = payload.title
+    if payload.content is not None:
+        draft.content = payload.content
+    if payload.keywords is not None:
+        draft.keywords = payload.keywords
+    await db.commit()
+    return {"status": "ok"}
+
+
+@router.post("/knowledge-drafts/{draft_id}/approve")
+async def approve_knowledge_draft(draft_id: str, db: AsyncSession = Depends(get_db)):
+    """管理员确认草稿，正式写入知识库（向量库 + BM25 索引同步）"""
+    draft = await db.get(KnowledgeDraft, draft_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="草稿不存在")
+    if draft.status != "pending":
+        raise HTTPException(status_code=400, detail=f"草稿已处于「{draft.status}」状态，不能重复处理")
+
+    node_id = f"kb_evolved_{uuid.uuid4().hex[:8]}"
+    await external_kb.add_knowledge([{
+        "node_id": node_id,
+        "title": draft.title,
+        "keywords": draft.keywords or [],
+        "rule_content": draft.content,
+    }])
+    await retrieval_pipeline.sync_bm25_from_kb(force=True)
+
+    draft.status = "approved"
+    draft.node_id = node_id
+    draft.reviewed_at = datetime.now()
+    await db.commit()
+    return {"status": "ok", "node_id": node_id}
+
+
+@router.post("/knowledge-drafts/{draft_id}/reject")
+async def reject_knowledge_draft(draft_id: str, db: AsyncSession = Depends(get_db)):
+    """驳回草稿，不入库"""
+    draft = await db.get(KnowledgeDraft, draft_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="草稿不存在")
+    if draft.status != "pending":
+        raise HTTPException(status_code=400, detail=f"草稿已处于「{draft.status}」状态，不能重复处理")
+    draft.status = "rejected"
+    draft.reviewed_at = datetime.now()
+    await db.commit()
+    return {"status": "ok"}

@@ -90,7 +90,7 @@ class QuizAgent:
 }}
 """
         messages = [{"role": "user", "content": prompt}]
-        response = await llm_client.async_chat_completion(messages, trace_id=trace_id)
+        response = await llm_client.async_chat_completion(messages, trace_id=trace_id, model="chat")
 
         try:
             return _parse_llm_json_robust(
@@ -112,15 +112,20 @@ class QuizAgent:
 
 【考生的实际回答】: {trainee_answer}
 
-请严格按照以下 JSON 格式输出评估结果：
+【判分原则】
+- 只要考生回答的内容在语义上覆盖了某个得分点，就算命中，不要求逐字逐句和"标准答案参考"一致，也不要因为表达更简洁、说法不同就判定未覆盖
+- 例如得分点是"告知时间"，考生只要给出了具体的时间/时长信息（无论用什么措辞），就算命中这一条
+- 只有在回答中确实完全没有涉及某个得分点对应的信息时，才把它放进 missed_points
+
+请严格按照以下 JSON 格式输出评估结果，不要输出 JSON 之外的任何文字：
 {{
-    "score": 0-100的整数,
+    "score": <整数，必须在 0 到 100 之间，不允许超出此范围>,
     "feedback": "具体的改进建议或表扬",
-    "missed_points": ["未提及的关键点列表"]
+    "missed_points": [考生回答中没有覆盖到的关键得分点原文，从上面【关键得分点】列表里逐字挑选；如果全部覆盖到了，这里必须是空数组 []，不要写解释性文字]
 }}
 """
         messages = [{"role": "user", "content": prompt}]
-        response = await llm_client.async_chat_completion(messages, trace_id=trace_id)
+        response = await llm_client.async_chat_completion(messages, trace_id=trace_id, model="chat", temperature=0.2)
 
         try:
             return _parse_llm_json_robust(

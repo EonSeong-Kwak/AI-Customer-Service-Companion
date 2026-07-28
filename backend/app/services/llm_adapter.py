@@ -87,21 +87,24 @@ class LLMAdapter:
             logger.bind(trace_id=trace_id).error(f"LLM 调用失败: {e}")
             raise e
 
-    async def async_chat_completion(self, messages: List[Dict[str, str]], trace_id: str = "N/A", timeout: int = None, model: str = None) -> str:
+    async def async_chat_completion(self, messages: List[Dict[str, str]], trace_id: str = "N/A", timeout: int = None, model: str = None, temperature: float = None) -> str:
         """
         异步版本的生成文本接口
         model: 可选，指定模型名或模型类型（"reasoning"|"chat"|"fast"|"r1"）
+        temperature: 可选，不传则用模型默认值；判卷/评分这类需要稳定输出的场景建议传低值（如 0.2）
         """
         if not self.async_client:
             raise Exception("LLM 客户端未初始化(缺少 API Key)")
-            
+
         target_model = self.MODELS.get(model, model) or self.default_model
         start_time = time.time()
         try:
+            extra_kwargs = {"temperature": temperature} if temperature is not None else {}
             response = await self.async_client.chat.completions.create(
                 model=target_model,
                 messages=messages,
-                timeout=timeout or self.timeout
+                timeout=timeout or self.timeout,
+                **extra_kwargs
             )
             content = response.choices[0].message.content
             latency = time.time() - start_time

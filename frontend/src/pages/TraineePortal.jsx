@@ -33,11 +33,6 @@ const TraineePortal = () => {
   const [chatHistory, setChatHistory] = useState([])
   const [loading, setLoading] = useState(false)
   
-  // 评分状态
-  const [scoring, setScoring] = useState(false)
-  const [scoreReport, setScoreReport] = useState(null)
-  const [reportModalVisible, setReportModalVisible] = useState(false)
-  
   // 历史记录状态
   const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false)
   const [historyTab, setHistoryTab] = useState('exam')
@@ -491,13 +486,11 @@ const TraineePortal = () => {
     const setTargetHistory = isDocAgent ? setDocChatHistory : setChatHistory
 
     try {
-      let agentType = 'persona'
+      let agentType = 'quiz'
       if (isDocAgent) {
         agentType = 'doc'
       } else if (activeTab === 'practice') {
         agentType = 'quiz'
-      } else if (activeTab === 'persona-exam') {
-        agentType = 'persona'
       }
 
       const reqHistory = historyToUse.map(h => ({
@@ -612,27 +605,6 @@ const TraineePortal = () => {
     setTargetHistory(newHistory)
     
     await handleChatInternal(isDocAgent, msg, newHistory)
-  }
-
-  const handleEndExam = async () => {
-    if (chatHistory.length === 0) {
-      message.warning('您还没有进行任何对话，无法评分')
-      return
-    }
-    setScoring(true)
-    try {
-      const reqHistory = chatHistory.map(h => ({
-        role: h.role,
-        content: h.content
-      }))
-      const res = await api.post('/score', { history: reqHistory }, { timeout: 120000 })
-      setScoreReport(res.data)
-      setReportModalVisible(true)
-    } catch (err) {
-      message.error('评分生成失败: ' + (err.response?.data?.detail || err.message))
-    } finally {
-      setScoring(false)
-    }
   }
 
   const renderPracticeSelection = () => (
@@ -760,7 +732,7 @@ const TraineePortal = () => {
     </div>
   )
 
-  const renderChatBox = (placeholder, isExam = false, isDocAgent = false) => {
+  const renderChatBox = (placeholder, isDocAgent = false) => {
     const currentHistory = isDocAgent ? docChatHistory : chatHistory
     const currentText = isDocAgent ? docText : text
     const setCurrentText = isDocAgent ? setDocText : setText
@@ -791,7 +763,7 @@ const TraineePortal = () => {
               color: '#bfbfbf' 
             }}>
               <RobotOutlined style={{ fontSize: 64, marginBottom: 16, opacity: 0.5 }} />
-              <div style={{ fontSize: 16, fontWeight: 500 }}>{isExam ? 'AI 模拟客户已就绪' : (isDocAgent ? '伴随式导师已就绪' : 'AI 培训助手已就绪')}</div>
+              <div style={{ fontSize: 16, fontWeight: 500 }}>{isDocAgent ? '伴随式导师已就绪' : 'AI 培训助手已就绪'}</div>
               <div style={{ marginTop: 8, fontSize: 13, textAlign: 'center' }}>{placeholder}</div>
             </div>
           ) : (
@@ -909,20 +881,7 @@ const TraineePortal = () => {
                   </Button>
                 </div>
               )}
-              {isExam && !isDocAgent && (
-                <Button 
-                  danger 
-                  type="primary"
-                  ghost
-                  icon={<CheckCircleOutlined />} 
-                  loading={scoring} 
-                  onClick={handleEndExam}
-                  style={{ borderRadius: 20 }}
-                >
-                  结束考试并评分
-                </Button>
-              )}
-              <Button 
+              <Button
                 type="primary" 
                 icon={<SendOutlined />} 
                 loading={currentLoading} 
@@ -1255,7 +1214,7 @@ const TraineePortal = () => {
         open={aiTutorVisible}
         styles={{ body: { padding: 0 } }}
       >
-        {renderChatBox('请问在阅读业务文档时遇到了什么疑问？', false, true)}
+        {renderChatBox('请问在阅读业务文档时遇到了什么疑问？', true)}
       </Drawer>
     </div>
   )
@@ -1283,11 +1242,6 @@ const TraineePortal = () => {
       label: '理论考试',
       children: renderExamCenter(),
     },
-    {
-      key: 'persona-exam',
-      label: '情景模拟 (Persona Agent)',
-      children: renderChatBox('模拟客户已连接，请准备好接待...', true),
-    }
   ]
 
   return (
@@ -1316,50 +1270,6 @@ const TraineePortal = () => {
       <Card>
         <Tabs activeKey={activeTab} onChange={handleTabChange} items={items} />
       </Card>
-
-      <Modal
-        title="情景模拟评分报告"
-        open={reportModalVisible}
-        onOk={() => {
-          setReportModalVisible(false)
-          setChatHistory([]) // 考完清空
-        }}
-        onCancel={() => setReportModalVisible(false)}
-        width={700}
-      >
-        {scoreReport && (
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
-            <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
-              <div style={{ textAlign: 'center' }}>
-                <Progress 
-                  type="dashboard" 
-                  percent={scoreReport.overall_score || 0} 
-                  strokeColor={scoreReport.overall_score >= 80 ? '#52c41a' : (scoreReport.overall_score >= 60 ? '#faad14' : '#f5222d')}
-                />
-                <Title level={4} style={{ marginTop: 16 }}>综合得分</Title>
-              </div>
-              <div style={{ width: '400px' }}>
-                {renderRadarChart(scoreReport.score_details)}
-              </div>
-            </div>
-            
-            <Descriptions title="五维得分明细" bordered column={2}>
-              <Descriptions.Item label="业务准确性">{scoreReport.score_details?.accuracy || 0} 分</Descriptions.Item>
-              <Descriptions.Item label="服务态度">{scoreReport.score_details?.service_tone || 0} 分</Descriptions.Item>
-              <Descriptions.Item label="制度合规性">{scoreReport.score_details?.compliance || 0} 分</Descriptions.Item>
-              <Descriptions.Item label="情绪安抚">{scoreReport.score_details?.empathy || 0} 分</Descriptions.Item>
-              <Descriptions.Item label="沟通控场">{scoreReport.score_details?.dialogue_control || 0} 分</Descriptions.Item>
-            </Descriptions>
-
-            <div>
-              <Title level={5}>AI 综合评价与建议</Title>
-              <div style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, whiteSpace: 'pre-wrap' }}>
-                {scoreReport.feedback}
-              </div>
-            </div>
-          </Space>
-        )}
-      </Modal>
 
       <Drawer
         title="我的记录"
