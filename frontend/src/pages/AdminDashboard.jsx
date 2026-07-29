@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Graph as G6Graph } from '@antv/g6'
-import { Typography, Card, Tabs, Table, Button, Space, Modal, Form, Input, message, Popconfirm, Tag, Upload, Statistic, Row, Col, Select, Drawer, Divider, Checkbox } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, DashboardOutlined, FileTextOutlined, WarningOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { Typography, Card, Tabs, Table, Button, Space, Modal, Form, Input, message, Popconfirm, Tag, Upload, Statistic, Row, Col, Select, Drawer, Divider, Checkbox, AutoComplete } from 'antd'
+import {
+  PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, DashboardOutlined, FileTextOutlined,
+  WarningOutlined, ThunderboltOutlined, ArrowLeftOutlined, UserOutlined, ProjectOutlined, ApiOutlined,
+  OrderedListOutlined, DatabaseOutlined
+} from '@ant-design/icons'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 import axios from 'axios'
 
@@ -10,8 +14,49 @@ const { TextArea } = Input
 
 const API_BASE = 'http://localhost:8000/api/v1/admin'
 
+// 配置大厅首页的模块分组：点进去才跳转到具体模块的独立页面，而不是把十几个功能全部平铺成一排 Tabs
+const MODULE_GROUPS = [
+  {
+    title: '培训内容配置',
+    modules: [
+      { key: 'personas', label: '客户人格配置 (Persona)', icon: <UserOutlined />, desc: '配置模拟客户的性格、情绪基线与话术风格' },
+      { key: 'questions', label: '练习题库管理 (Quiz)', icon: <FileTextOutlined />, desc: '管理经典题库的场景、参考答案与得分点' },
+      { key: 'projects', label: '项目场景配置 (PBL)', icon: <ProjectOutlined />, desc: '配置多任务流程的项目制考试场景' },
+    ]
+  },
+  {
+    title: '情景陪练 · Coze 工作流',
+    modules: [
+      { key: 'coze-workflows', label: 'Coze 工作流注册', icon: <ApiOutlined />, desc: '维护业务线与 Coze workflow_id 的对应关系' },
+      { key: 'practice-nodes', label: '情景陪练题目管理', icon: <OrderedListOutlined />, desc: '维护各业务线陪练题目镜像表与同步状态' },
+      { key: 'practice-drafts', label: '陪练题目 AI 起草', icon: <ThunderboltOutlined />, desc: 'AI 起草陪练题目草稿，人工审核后入库' },
+    ]
+  },
+  {
+    title: '知识库与教研',
+    modules: [
+      { key: 'builder', label: '自动化教研 (Auto-Builder)', icon: <UploadOutlined />, desc: '上传业务文档，AI 自动提取知识点' },
+      { key: 'kb-manage', label: '知识库管理', icon: <DatabaseOutlined />, desc: '管理知识库节点、业务线归类与知识图谱' },
+    ]
+  },
+  {
+    title: '数据与分析',
+    modules: [
+      { key: 'dashboard', label: '数据大屏', icon: <DashboardOutlined />, desc: '全局学员表现、易错点与分类统计' },
+      { key: 'key-point-stats', label: '群体薄弱知识点', icon: <WarningOutlined />, desc: '统计全员得分点命中率，驱动知识库自动补强' },
+      { key: 'weaknesses', label: '学员错题画像', icon: <WarningOutlined />, desc: '查看全体学员的弱点标签与得分明细' },
+    ]
+  },
+  {
+    title: '组卷与发卷',
+    modules: [
+      { key: 'papers', label: '组卷发卷', icon: <FileTextOutlined />, desc: '组建试卷、下发给学员、查看做题记录' },
+    ]
+  },
+]
+
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('personas')
+  const [activeTab, setActiveTab] = useState(null)
   const [loading, setLoading] = useState(false)
   
   // State for Personas
@@ -844,13 +889,12 @@ const AdminDashboard = () => {
       </div>
       
       <Card bordered={false} style={{ minHeight: 600 }}>
-        <Tabs
-          activeKey={activeTab}
-          onChange={(key) => {
+        {(() => {
+          const handleSelectModule = (key) => {
             setActiveTab(key)
             if (key === 'kb-manage') { fetchKbNodes(); fetchKbRelations() }
-          }}
-          items={[
+          }
+          const moduleItems = [
             {
               key: 'personas',
               label: '客户人格配置 (Persona)',
@@ -1377,9 +1421,62 @@ const AdminDashboard = () => {
               key: 'key-point-stats',
               label: <span><WarningOutlined /> 群体薄弱知识点</span>,
               children: <KeyPointStatsTab />
+            },
+            {
+              key: 'coze-workflows',
+              label: 'Coze 工作流注册',
+              children: <CozeWorkflowRegistryTab />
+            },
+            {
+              key: 'practice-nodes',
+              label: '情景陪练题目管理',
+              children: <PracticeNodeQuestionsTab />
+            },
+            {
+              key: 'practice-drafts',
+              label: <span><ThunderboltOutlined /> 陪练题目 AI 起草</span>,
+              children: <PracticeQuestionDraftsTab />
             }
-          ]}
-        />
+          ]
+
+          if (!activeTab) {
+            return (
+              <div>
+                {MODULE_GROUPS.map(group => (
+                  <div key={group.title} style={{ marginBottom: 32 }}>
+                    <Typography.Title level={5} style={{ marginBottom: 16, color: '#8c8c8c' }}>{group.title}</Typography.Title>
+                    <Row gutter={[16, 16]}>
+                      {group.modules.map(m => (
+                        <Col xs={24} sm={12} md={8} lg={6} key={m.key}>
+                          <Card hoverable onClick={() => handleSelectModule(m.key)} style={{ height: '100%' }} bodyStyle={{ padding: 16 }}>
+                            <Space align="start">
+                              <div style={{ fontSize: 26, color: '#1677ff', lineHeight: 1 }}>{m.icon}</div>
+                              <div>
+                                <div style={{ fontWeight: 600, fontSize: 15 }}>{m.label}</div>
+                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{m.desc}</Typography.Text>
+                              </div>
+                            </Space>
+                          </Card>
+                        </Col>
+                      ))}
+                    </Row>
+                  </div>
+                ))}
+              </div>
+            )
+          }
+
+          const current = moduleItems.find(i => i.key === activeTab)
+          return (
+            <div>
+              <Button icon={<ArrowLeftOutlined />} onClick={() => setActiveTab(null)} style={{ marginBottom: 16 }}>
+                返回配置大厅
+              </Button>
+              <Typography.Title level={4} style={{ marginBottom: 16 }}>{current?.label}</Typography.Title>
+              {current?.children}
+            </div>
+          )
+        })()}
       </Card>
 
       {/* Persona Modal */}
@@ -2073,6 +2170,587 @@ const ProjectScenariosTab = () => {
 ]`}
               style={{ fontFamily: 'monospace', fontSize: 12 }}
             />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  )
+}
+
+// ===== V6.0: Coze 工作流注册表管理 =====
+const CozeWorkflowRegistryTab = () => {
+  const [registries, setRegistries] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [form] = Form.useForm()
+
+  const fetchRegistries = async () => {
+    setLoading(true)
+    try {
+      const res = await axios.get(`${API_BASE}/coze-workflows`)
+      setRegistries(res.data || [])
+    } catch (e) {
+      message.error('加载工作流注册表失败: ' + (e.response?.data?.detail || e.message))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchRegistries() }, [])
+
+  const openModal = (row = null) => {
+    setEditing(row)
+    if (row) {
+      form.setFieldsValue(row)
+    } else {
+      form.resetFields()
+      form.setFieldsValue({ mode_param_key: 'mode', practice_mode_value: 'practice', tongguan_mode_value: 'tongguan', enabled: true })
+    }
+    setModalVisible(true)
+  }
+
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields()
+      if (editing) {
+        const { business_line, ...updatable } = values
+        await axios.put(`${API_BASE}/coze-workflows/${editing.id}`, updatable)
+        message.success('更新成功')
+      } else {
+        await axios.post(`${API_BASE}/coze-workflows`, values)
+        message.success('注册成功')
+      }
+      setModalVisible(false)
+      fetchRegistries()
+    } catch (e) {
+      if (e.response?.data?.detail) message.error('保存失败: ' + e.response.data.detail)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`${API_BASE}/coze-workflows/${id}`)
+      message.success('已删除，该业务线将自动降级为本地兜底题库')
+      fetchRegistries()
+    } catch (e) {
+      message.error('删除失败: ' + (e.response?.data?.detail || e.message))
+    }
+  }
+
+  const columns = [
+    { title: '业务线', dataIndex: 'business_line', key: 'business_line', width: 140, render: v => <Tag color="blue">{v}</Tag> },
+    { title: 'Workflow ID', dataIndex: 'workflow_id', key: 'workflow_id', ellipsis: true },
+    { title: 'Bot ID', dataIndex: 'bot_id', key: 'bot_id', width: 140, render: v => v || <Typography.Text type="secondary">-</Typography.Text> },
+    { title: 'App ID', dataIndex: 'app_id', key: 'app_id', width: 140, render: v => v || <Typography.Text type="secondary">-</Typography.Text> },
+    {
+      title: '模式参数', key: 'mode_params', width: 220,
+      render: (_, r) => <span style={{ fontSize: 12 }}>{r.mode_param_key} = {r.practice_mode_value} / {r.tongguan_mode_value}</span>
+    },
+    {
+      title: '状态', dataIndex: 'enabled', key: 'enabled', width: 90,
+      render: v => v ? <Tag color="success">已启用</Tag> : <Tag color="default">已禁用（走本地兜底）</Tag>
+    },
+    {
+      title: '操作', key: 'action', width: 150,
+      render: (_, r) => (
+        <Space>
+          <Button size="small" icon={<EditOutlined />} onClick={() => openModal(r)}>编辑</Button>
+          <Popconfirm title="确定删除？删除后该业务线将自动降级为本地兜底题库" onConfirm={() => handleDelete(r.id)}>
+            <Button size="small" danger icon={<DeleteOutlined />}>删除</Button>
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ]
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16 }}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>注册工作流</Button>
+        <Typography.Text type="secondary" style={{ marginLeft: 12 }}>
+          维护业务线 ↔ Coze 工作流 ID 的对应关系。未注册或已禁用的业务线，考生端「情景陪练」会自动降级为本地题库，不影响练习体验。
+        </Typography.Text>
+      </div>
+      <Table dataSource={registries} columns={columns} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
+
+      <Modal
+        title={editing ? '编辑工作流注册' : '注册工作流'}
+        open={modalVisible}
+        onOk={handleSave}
+        onCancel={() => setModalVisible(false)}
+        width={600}
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item name="business_line" label="业务线" rules={[{ required: true, message: '请输入业务线名称' }]}>
+            <Input placeholder="如：卡片挂失" disabled={!!editing} />
+          </Form.Item>
+          <Form.Item name="workflow_id" label="Coze Workflow ID" rules={[{ required: true, message: '请输入 workflow_id' }]}>
+            <Input placeholder="从 Coze 工作流页面 URL 里的 workflow_id 参数复制" />
+          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="bot_id" label="Bot ID（可选）">
+                <Input placeholder="不填则使用全局默认" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="app_id" label="App ID（可选，与 Bot ID 二选一）">
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="mode_param_key" label="模式参数名">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="practice_mode_value" label="练习模式取值">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="tongguan_mode_value" label="通关模式取值">
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="enabled" label="是否启用" valuePropName="checked" initialValue={true}>
+            <Checkbox>启用（关闭后自动走本地兜底题库，不影响考生练习）</Checkbox>
+          </Form.Item>
+          <Form.Item name="notes" label="备注">
+            <TextArea rows={2} placeholder="联调状态、注意事项等，仅管理员可见" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  )
+}
+
+// ===== V6.0: 练习节点题目镜像表管理 =====
+const PracticeNodeQuestionsTab = () => {
+  const [nodes, setNodes] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [businessLines, setBusinessLines] = useState([])
+  const [filterLine, setFilterLine] = useState(undefined)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [form] = Form.useForm()
+
+  const fetchBusinessLines = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/prewarm/status`)
+      setBusinessLines(res.data?.business_lines || [])
+    } catch (e) {
+      // 拿不到真实业务线列表时不报错打扰，下拉框允许手动输入兜底
+    }
+  }
+
+  const fetchNodes = async (businessLine) => {
+    setLoading(true)
+    try {
+      const res = await axios.get(`${API_BASE}/practice-nodes`, { params: businessLine ? { business_line: businessLine } : {} })
+      setNodes(res.data || [])
+    } catch (e) {
+      message.error('加载题目镜像表失败: ' + (e.response?.data?.detail || e.message))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchBusinessLines(); fetchNodes() }, [])
+
+  const openModal = (row = null) => {
+    setEditing(row)
+    if (row) {
+      form.setFieldsValue({ ...row, key_points_text: (row.key_points || []).join('、') })
+    } else {
+      form.resetFields()
+      form.setFieldsValue({ business_line: filterLine, order_index: nodes.length, difficulty: 'medium' })
+    }
+    setModalVisible(true)
+  }
+
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields()
+      const { key_points_text, ...rest } = values
+      const payload = { ...rest, key_points: (key_points_text || '').split(/[、,，]/).map(k => k.trim()).filter(Boolean) }
+      if (editing) {
+        const { business_line, ...updatable } = payload
+        await axios.put(`${API_BASE}/practice-nodes/${editing.id}`, updatable)
+        message.success('更新成功（如改动了题干/答案/得分点，同步状态已自动重置为「未同步」）')
+      } else {
+        await axios.post(`${API_BASE}/practice-nodes`, payload)
+        message.success('新增成功，记得手动同步到 Coze 工作流编辑器')
+      }
+      setModalVisible(false)
+      fetchNodes(filterLine)
+    } catch (e) {
+      if (e.response?.data?.detail) message.error('保存失败: ' + e.response.data.detail)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`${API_BASE}/practice-nodes/${id}`)
+      message.success('已删除')
+      fetchNodes(filterLine)
+    } catch (e) {
+      message.error('删除失败: ' + (e.response?.data?.detail || e.message))
+    }
+  }
+
+  const handleMarkSynced = async (id) => {
+    try {
+      await axios.post(`${API_BASE}/practice-nodes/${id}/mark-synced`)
+      message.success('已标记为已同步')
+      fetchNodes(filterLine)
+    } catch (e) {
+      message.error('标记失败: ' + (e.response?.data?.detail || e.message))
+    }
+  }
+
+  const columns = [
+    { title: '业务线', dataIndex: 'business_line', key: 'business_line', width: 110, render: v => <Tag color="blue">{v}</Tag> },
+    { title: '顺序', dataIndex: 'order_index', key: 'order_index', width: 60 },
+    { title: '节点标识', dataIndex: 'node_key', key: 'node_key', width: 110, render: v => v || <Typography.Text type="secondary">-</Typography.Text> },
+    { title: '题干', dataIndex: 'question_text', key: 'question_text', ellipsis: true },
+    { title: '参考答案', dataIndex: 'reference_answer', key: 'reference_answer', ellipsis: true },
+    { title: '得分点', dataIndex: 'key_points', key: 'key_points', width: 180, render: kps => (kps || []).map(k => <Tag key={k}>{k}</Tag>) },
+    {
+      title: '同步状态', dataIndex: 'sync_status', key: 'sync_status', width: 100,
+      render: v => v === 'synced' ? <Tag color="success">已同步</Tag> : <Tag color="warning">未同步</Tag>
+    },
+    {
+      title: '操作', key: 'action', width: 200,
+      render: (_, r) => (
+        <Space size="small">
+          <Button size="small" icon={<EditOutlined />} onClick={() => openModal(r)}>编辑</Button>
+          {r.sync_status !== 'synced' && (
+            <Button size="small" onClick={() => handleMarkSynced(r.id)}>标记已同步</Button>
+          )}
+          <Popconfirm title="确定删除？" onConfirm={() => handleDelete(r.id)}>
+            <Button size="small" danger icon={<DeleteOutlined />}>删除</Button>
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ]
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Space>
+          <Select
+            allowClear
+            showSearch
+            style={{ width: 220 }}
+            placeholder="按业务线筛选"
+            value={filterLine}
+            onChange={(v) => { setFilterLine(v); fetchNodes(v) }}
+            options={businessLines.map(bl => ({ label: bl, value: bl }))}
+            filterOption={(input, option) => (option?.label ?? '').includes(input)}
+          />
+          <Button onClick={() => fetchNodes(filterLine)} loading={loading}>刷新</Button>
+        </Space>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增题目</Button>
+      </div>
+      <Typography.Paragraph type="secondary">
+        这是我方对 Coze 工作流各节点内容的独立副本：既是评分依据（按「顺序」对齐每轮问答），也是本地兜底题库，
+        更是你往 Coze 控制台手动粘贴文案时的标准文本来源——Coze 工作流节点内容目前没有开放 API 可以程序化修改，改完这里之后仍需手动同步。
+      </Typography.Paragraph>
+      <Table dataSource={nodes} columns={columns} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
+
+      <Modal
+        title={editing ? '编辑题目' : '新增题目'}
+        open={modalVisible}
+        onOk={handleSave}
+        onCancel={() => setModalVisible(false)}
+        width={700}
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="business_line" label="业务线" rules={[{ required: true, message: '请输入业务线' }]}>
+                <Input disabled={!!editing} placeholder="如：卡片挂失" />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item name="order_index" label="顺序" rules={[{ required: true, message: '请输入顺序' }]} tooltip="打分时按这个顺序和考生对话轮次对齐，务必和 Coze 工作流节点的实际先后顺序一致">
+                <Input type="number" min={0} />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item name="difficulty" label="难度">
+                <Select options={[{ value: 'easy', label: '简单' }, { value: 'medium', label: '中等' }, { value: 'hard', label: '困难' }]} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="node_key" label="节点标识（可选）" tooltip="自行对照 Coze 工作流里的节点标题/ID 填写，仅供人工核对，不参与打分逻辑">
+            <Input placeholder="如：挂失受理" />
+          </Form.Item>
+          <Form.Item name="question_text" label="题干（练习模式下原样提问）" rules={[{ required: true, message: '请输入题干' }]}>
+            <TextArea rows={2} />
+          </Form.Item>
+          <Form.Item name="reference_answer" label="参考答案" rules={[{ required: true, message: '请输入参考答案' }]}>
+            <TextArea rows={3} />
+          </Form.Item>
+          <Form.Item name="key_points_text" label="得分点（用、或,分隔）" rules={[{ required: true, message: '请至少填写一个得分点' }]}>
+            <Input placeholder="如：礼貌用语、告知时间" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  )
+}
+
+// ===== V6.0: AI 起草练习题草稿审核 =====
+const PracticeQuestionDraftsTab = () => {
+  const [drafts, setDrafts] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [businessLines, setBusinessLines] = useState([])
+  const [kbNodeOptions, setKbNodeOptions] = useState([])
+  const [kbSearching, setKbSearching] = useState(false)
+
+  const [generateVisible, setGenerateVisible] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [generateForm] = Form.useForm()
+
+  const [editingDraft, setEditingDraft] = useState(null)
+  const [editForm] = Form.useForm()
+
+  const [approvingDraft, setApprovingDraft] = useState(null)
+  const [approveForm] = Form.useForm()
+  const [actionLoading, setActionLoading] = useState(null)
+
+  const fetchBusinessLines = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/prewarm/status`)
+      setBusinessLines(res.data?.business_lines || [])
+    } catch (e) { /* 允许手动输入兜底 */ }
+  }
+
+  const fetchDrafts = async () => {
+    setLoading(true)
+    try {
+      const res = await axios.get(`${API_BASE}/practice-question-drafts`)
+      setDrafts(res.data || [])
+    } catch (e) {
+      message.error('加载题目草稿失败: ' + (e.response?.data?.detail || e.message))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const searchKbNodes = async (value) => {
+    setKbSearching(true)
+    try {
+      const res = await axios.get(`${API_BASE}/kb-nodes/search`, { params: { q: value || '' } })
+      setKbNodeOptions((res.data || []).map(n => ({ label: `[${n.business_line || '未分类'}] ${n.content}`, value: n.node_id })))
+    } catch (e) {
+      // 检索失败静默，不打断草稿生成表单的使用
+    } finally {
+      setKbSearching(false)
+    }
+  }
+
+  useEffect(() => { fetchBusinessLines(); fetchDrafts(); searchKbNodes('') }, [])
+
+  const openGenerate = () => {
+    generateForm.resetFields()
+    generateForm.setFieldsValue({ difficulty: 'medium' })
+    setGenerateVisible(true)
+  }
+
+  const handleGenerate = async () => {
+    try {
+      const values = await generateForm.validateFields()
+      setGenerating(true)
+      await axios.post(`${API_BASE}/practice-question-drafts/generate`, values)
+      message.success('已生成草稿，请在下方列表审核')
+      setGenerateVisible(false)
+      fetchDrafts()
+    } catch (e) {
+      if (e.response?.data?.detail) message.error('生成失败: ' + e.response.data.detail)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const openEdit = (draft) => {
+    setEditingDraft(draft)
+    editForm.setFieldsValue({
+      scenario: draft.scenario,
+      reference_answer: draft.reference_answer,
+      key_points_text: (draft.key_points || []).join('、'),
+      difficulty: draft.difficulty,
+    })
+  }
+
+  const handleSaveEdit = async () => {
+    try {
+      const values = await editForm.validateFields()
+      await axios.put(`${API_BASE}/practice-question-drafts/${editingDraft.id}`, {
+        scenario: values.scenario,
+        reference_answer: values.reference_answer,
+        key_points: (values.key_points_text || '').split(/[、,，]/).map(k => k.trim()).filter(Boolean),
+        difficulty: values.difficulty,
+      })
+      message.success('草稿已更新')
+      setEditingDraft(null)
+      fetchDrafts()
+    } catch (e) {
+      if (e.response?.data?.detail) message.error('保存失败: ' + e.response.data.detail)
+    }
+  }
+
+  const openApprove = async (draft) => {
+    setApprovingDraft(draft)
+    let defaultOrder = 0
+    try {
+      const res = await axios.get(`${API_BASE}/practice-nodes`, { params: { business_line: draft.business_line } })
+      defaultOrder = (res.data || []).length
+    } catch (e) { /* 拿不到就默认从 0 开始，管理员可手动改 */ }
+    approveForm.resetFields()
+    approveForm.setFieldsValue({ order_index: defaultOrder })
+  }
+
+  const handleApprove = async () => {
+    try {
+      const values = await approveForm.validateFields()
+      setActionLoading(approvingDraft.id)
+      await axios.post(`${API_BASE}/practice-question-drafts/${approvingDraft.id}/approve`, values)
+      message.success('已写入题目镜像表，记得手动同步到 Coze 工作流编辑器')
+      setApprovingDraft(null)
+      fetchDrafts()
+    } catch (e) {
+      if (e.response?.data?.detail) message.error('入库失败: ' + e.response.data.detail)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleReject = async (draft) => {
+    setActionLoading(draft.id)
+    try {
+      await axios.post(`${API_BASE}/practice-question-drafts/${draft.id}/reject`)
+      message.info('已驳回')
+      fetchDrafts()
+    } catch (e) {
+      message.error('驳回失败: ' + (e.response?.data?.detail || e.message))
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const statusTag = (status) => {
+    if (status === 'approved') return <Tag color="success">已入库</Tag>
+    if (status === 'rejected') return <Tag color="default">已驳回</Tag>
+    return <Tag color="processing">待审核</Tag>
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography.Text type="secondary">
+          选一个知识库节点，AI 起草一道情景练习题（场景+参考答案+得分点），审核通过后写入题目镜像表。
+        </Typography.Text>
+        <Space>
+          <Button onClick={fetchDrafts} loading={loading}>刷新</Button>
+          <Button type="primary" icon={<ThunderboltOutlined />} onClick={openGenerate}>生成草稿</Button>
+        </Space>
+      </div>
+      <Table
+        dataSource={drafts}
+        rowKey="id"
+        loading={loading}
+        pagination={{ pageSize: 8 }}
+        columns={[
+          { title: '业务线', dataIndex: 'business_line', key: 'business_line', width: 110, render: v => <Tag color="blue">{v}</Tag> },
+          { title: '场景（题干）', dataIndex: 'scenario', key: 'scenario', ellipsis: true },
+          { title: '得分点', dataIndex: 'key_points', key: 'key_points', width: 180, render: kps => (kps || []).map(k => <Tag key={k}>{k}</Tag>) },
+          { title: '状态', dataIndex: 'status', key: 'status', width: 90, render: statusTag },
+          {
+            title: '操作', key: 'actions', width: 220,
+            render: (_, row) => row.status === 'pending' ? (
+              <Space size="small">
+                <Button size="small" onClick={() => openEdit(row)}>编辑</Button>
+                <Button size="small" type="primary" loading={actionLoading === row.id} onClick={() => openApprove(row)}>确认入库</Button>
+                <Button size="small" danger loading={actionLoading === row.id} onClick={() => handleReject(row)}>驳回</Button>
+              </Space>
+            ) : (
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {row.status === 'approved' ? '已写入题目镜像表' : '已驳回，不再处理'}
+              </Typography.Text>
+            )
+          },
+        ]}
+      />
+
+      <Modal title="生成题目草稿" open={generateVisible} onOk={handleGenerate} confirmLoading={generating} onCancel={() => setGenerateVisible(false)} destroyOnClose>
+        <Form form={generateForm} layout="vertical">
+          <Form.Item name="business_line" label="归属业务线" rules={[{ required: true, message: '请选择或输入业务线' }]}>
+            <AutoComplete
+              placeholder="选择已有业务线，或直接输入新业务线名称"
+              options={businessLines.map(bl => ({ label: bl, value: bl }))}
+              filterOption={(input, option) => (option?.value ?? '').includes(input)}
+            />
+          </Form.Item>
+          <Form.Item name="source_node_id" label="知识库节点（出题素材）" rules={[{ required: true, message: '请选择知识库节点' }]}>
+            <Select
+              showSearch
+              placeholder="搜索知识库节点内容"
+              loading={kbSearching}
+              filterOption={false}
+              onSearch={searchKbNodes}
+              options={kbNodeOptions}
+            />
+          </Form.Item>
+          <Form.Item name="difficulty" label="难度">
+            <Select options={[{ value: 'easy', label: '简单' }, { value: 'medium', label: '中等' }, { value: 'hard', label: '困难' }]} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal title="编辑草稿" open={!!editingDraft} onOk={handleSaveEdit} onCancel={() => setEditingDraft(null)} okText="保存" destroyOnClose>
+        <Form form={editForm} layout="vertical">
+          <Form.Item name="scenario" label="场景（题干）" rules={[{ required: true, message: '请输入题干' }]}>
+            <TextArea rows={2} />
+          </Form.Item>
+          <Form.Item name="reference_answer" label="参考答案" rules={[{ required: true, message: '请输入参考答案' }]}>
+            <TextArea rows={3} />
+          </Form.Item>
+          <Form.Item name="key_points_text" label="得分点（用、或,分隔）" rules={[{ required: true, message: '请至少填写一个得分点' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="difficulty" label="难度">
+            <Select options={[{ value: 'easy', label: '简单' }, { value: 'medium', label: '中等' }, { value: 'hard', label: '困难' }]} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="确认入库"
+        open={!!approvingDraft}
+        onOk={handleApprove}
+        confirmLoading={actionLoading === approvingDraft?.id}
+        onCancel={() => setApprovingDraft(null)}
+        destroyOnClose
+      >
+        <Typography.Paragraph type="secondary">
+          写入题目镜像表后仍需要手动把文案同步到 Coze 工作流编辑器（题目节点管理页可标记同步状态）。
+        </Typography.Paragraph>
+        <Form form={approveForm} layout="vertical">
+          <Form.Item name="node_key" label="节点标识（可选）" tooltip="自行对照 Coze 工作流节点标题填写">
+            <Input placeholder="如：挂失受理" />
+          </Form.Item>
+          <Form.Item name="order_index" label="顺序" rules={[{ required: true, message: '请输入顺序' }]} tooltip="需要和 Coze 工作流里该节点的实际先后顺序一致，打分靠这个对齐">
+            <Input type="number" min={0} />
           </Form.Item>
         </Form>
       </Modal>

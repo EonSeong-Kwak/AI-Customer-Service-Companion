@@ -239,21 +239,48 @@ const CozePracticeTrainee = () => {
               size="small"
               bordered
               dataSource={result.transcript || []}
-              renderItem={(t) => (
-                <List.Item>
-                  <div style={{ width: '100%' }}>
-                    <div><Tag color="blue">问</Tag>{t.question_text}</div>
-                    <div style={{ marginTop: 4 }}>
-                      <Tag color="green">答</Tag>{t.trainee_answer || <Text type="secondary">（未作答）</Text>}
-                      {t.trainee_answer && !t.scored && (
-                        <Tag color="default" style={{ marginLeft: 8 }}>
-                          {t.score_skip_reason || '未计入评分'}
-                        </Tag>
+              renderItem={(t) => {
+                const missedSet = new Set(t.missed_points || [])
+                return (
+                  <List.Item>
+                    <div style={{ width: '100%' }}>
+                      <div><Tag color="blue">问</Tag>{t.question_text}</div>
+                      <div style={{ marginTop: 4 }}>
+                        <Tag color="green">答</Tag>{t.trainee_answer || <Text type="secondary">（未作答）</Text>}
+                        {t.trainee_answer && !t.scored && (
+                          <Tag color="default" style={{ marginLeft: 8 }}>
+                            {t.score_skip_reason || '未计入评分'}
+                          </Tag>
+                        )}
+                        {t.scored && t.score != null && (
+                          <Tag color={t.score >= 80 ? 'success' : t.score >= 60 ? 'warning' : 'error'} style={{ marginLeft: 8 }}>
+                            本题得分 {t.score}
+                          </Tag>
+                        )}
+                      </div>
+                      {t.key_points && t.key_points.length > 0 && (
+                        <div style={{ marginTop: 6 }}>
+                          <Text type="secondary" style={{ marginRight: 6 }}>本题得分点：</Text>
+                          {t.key_points.map(kp => (
+                            <Tag
+                              key={kp}
+                              color={!t.scored ? 'default' : missedSet.has(kp) ? 'orange' : 'green'}
+                              style={{ marginBottom: 4 }}
+                            >
+                              {t.scored ? (missedSet.has(kp) ? `✗ ${kp}` : `✓ ${kp}`) : kp}
+                            </Tag>
+                          ))}
+                        </div>
+                      )}
+                      {t.scored && t.feedback && (
+                        <div style={{ marginTop: 4 }}>
+                          <Text type="secondary">点评：{t.feedback}</Text>
+                        </div>
                       )}
                     </div>
-                  </div>
-                </List.Item>
-              )}
+                  </List.Item>
+                )
+              }}
               locale={{ emptyText: <Empty description="暂无记录" /> }}
             />
           </div>

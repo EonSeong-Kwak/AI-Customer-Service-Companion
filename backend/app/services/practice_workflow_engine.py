@@ -238,12 +238,20 @@ class PracticeWorkflowEngine:
         for t in transcript:
             t["scored"] = False
             t["score_skip_reason"] = None
+            t["key_points"] = None
+            t["missed_points"] = None
+            t["score"] = None
+            t["feedback"] = None
 
         for i, turn in enumerate(session.transcript or []):
             answer = turn.get("trainee_answer")
+            node = nodes_by_order.get(i)
+            if node:
+                # 无论这一轮是否作答/打分成功，都先把这道题配置的得分点亮出来，
+                # 报告里才能看清"这题原本要考什么"，而不是只有一个笼统的覆盖率数字
+                transcript[i]["key_points"] = node.key_points or []
             if not answer:
                 continue
-            node = nodes_by_order.get(i)
             if not node:
                 # Coze 工作流实跑的节点数比本地镜像表登记的多，没有参考答案/得分点可评分——
                 # 答案仍保留在 transcript 里供人工查看，只是不参与自动打分
@@ -269,6 +277,9 @@ class PracticeWorkflowEngine:
             raw_score = evaluation.get("score")
             score = max(0, min(100, raw_score)) if raw_score is not None else None
             missed = set(evaluation.get("missed_points", []) or [])
+            transcript[i]["score"] = score
+            transcript[i]["feedback"] = evaluation.get("feedback")
+            transcript[i]["missed_points"] = list(missed)
             if score is not None:
                 turn_scores.append(score)
 
