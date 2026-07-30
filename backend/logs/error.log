@@ -1,0 +1,168 @@
+2026-07-16 10:43:42 | ERROR    | app.main:dispatch:41 | trace_id=17d4237e-7307-4ff0-9d5f-2c6e86a65976 - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1045, "Access denied for user 'root'@'192.168.65.1' (using password: YES)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-16 10:43:42 | ERROR    | app.main:dispatch:41 | trace_id=d923dfe1-e6a3-4fad-ac57-bce23c7d8c18 - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1045, "Access denied for user 'root'@'192.168.65.1' (using password: YES)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-16 10:43:43 | ERROR    | app.main:dispatch:41 | trace_id=a8023781-de29-4b7c-af79-8002d87cfa2c - Request failed: GET /api/v1/admin/questions - (pymysql.err.OperationalError) (1045, "Access denied for user 'root'@'192.168.65.1' (using password: YES)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-16 10:44:05 | ERROR    | app.main:dispatch:41 | trace_id=76e8fe5b-ed13-4bf0-b410-68f2012d64ea - Request failed: GET /api/v1/admin/questions - (pymysql.err.OperationalError) (1045, "Access denied for user 'root'@'192.168.65.1' (using password: YES)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-16 10:45:00 | ERROR    | app.main:dispatch:41 | trace_id=26ecf56d-c2b1-4839-b359-9cd0fcdb20c4 - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1045, "Access denied for user 'root'@'192.168.65.1' (using password: YES)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-16 10:45:08 | ERROR    | app.main:dispatch:41 | trace_id=62f3aee9-4ab2-4c70-858e-5a80a180c25b - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1045, "Access denied for user 'root'@'192.168.65.1' (using password: YES)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-16 10:45:08 | ERROR    | app.main:dispatch:41 | trace_id=e2edc010-2aa6-4a6c-84cc-461d0244b343 - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1045, "Access denied for user 'root'@'192.168.65.1' (using password: YES)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-16 10:45:15 | ERROR    | app.main:dispatch:41 | trace_id=f6d544e6-a484-40bb-8634-5174dff81225 - Request failed: GET /api/v1/admin/questions - (pymysql.err.OperationalError) (1045, "Access denied for user 'root'@'192.168.65.1' (using password: YES)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-16 10:45:16 | ERROR    | app.main:dispatch:41 | trace_id=d4d08924-7bb7-45b2-95e6-5ffbb26fd0bd - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1045, "Access denied for user 'root'@'192.168.65.1' (using password: YES)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-16 10:45:17 | ERROR    | app.main:dispatch:41 | trace_id=5671d3bf-430b-4d6b-9686-f21dc046c0e0 - Request failed: GET /api/v1/admin/questions - (pymysql.err.OperationalError) (1045, "Access denied for user 'root'@'192.168.65.1' (using password: YES)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-16 10:45:18 | ERROR    | app.main:dispatch:41 | trace_id=ffd03d36-b72e-411c-a92e-c395163fe08a - Request failed: GET /api/v1/admin/questions - (pymysql.err.OperationalError) (1045, "Access denied for user 'root'@'192.168.65.1' (using password: YES)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-16 10:45:51 | ERROR    | app.main:dispatch:41 | trace_id=55e69df0-6292-4469-9112-d0d06277f178 - Request failed: GET /api/v1/admin/questions - (pymysql.err.OperationalError) (1045, "Access denied for user 'root'@'192.168.65.1' (using password: YES)")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-16 16:40:19 | ERROR    | app.main:dispatch:41 | trace_id=fb26fca1-087e-45e4-9296-098c9f8cb70f - Request failed: POST /api/v1/admin/exam-papers - (pymysql.err.IntegrityError) (1452, 'Cannot add or update a child row: a foreign key constraint fails (`customer_service`.`exam_papers`, CONSTRAINT `exam_papers_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`))')
+[SQL: INSERT INTO exam_papers (id, title, question_ids, created_by) VALUES (%s, %s, %s, %s)]
+[parameters: ('4352ad19-c0fe-412a-a4c4-1e64f5403bbd', '111', '["4851ab53-b843-4438-a7bb-2171d097ecf5", "6bcc3cfd-836c-4a10-95bc-1c43ce10d075", "a0a0c6ba-83f3-4cbf-a409-c2840c25ac3d"]', 'admin')]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-07-16 16:40:33 | ERROR    | app.main:dispatch:41 | trace_id=10538e63-1fea-4952-827b-aeda52a0b571 - Request failed: POST /api/v1/admin/exam-papers - (pymysql.err.IntegrityError) (1452, 'Cannot add or update a child row: a foreign key constraint fails (`customer_service`.`exam_papers`, CONSTRAINT `exam_papers_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`))')
+[SQL: INSERT INTO exam_papers (id, title, question_ids, created_by) VALUES (%s, %s, %s, %s)]
+[parameters: ('44b37460-6d1c-4b85-8763-89ec51a80ca9', '111', '["4851ab53-b843-4438-a7bb-2171d097ecf5", "6bcc3cfd-836c-4a10-95bc-1c43ce10d075", "a0a0c6ba-83f3-4cbf-a409-c2840c25ac3d"]', 'admin')]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-07-16 16:43:32 | ERROR    | app.main:dispatch:41 | trace_id=e20ea61f-eb16-4b8f-93fe-3d86e9e4e349 - Request failed: POST /api/v1/admin/exam-papers - (pymysql.err.IntegrityError) (1452, 'Cannot add or update a child row: a foreign key constraint fails (`customer_service`.`exam_papers`, CONSTRAINT `exam_papers_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`))')
+[SQL: INSERT INTO exam_papers (id, title, question_ids, created_by) VALUES (%s, %s, %s, %s)]
+[parameters: ('398de56d-c343-4fc1-a6bc-b6ab71da5bf0', '测试试卷', '["test-id"]', 'admin')]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-07-17 15:11:26 | ERROR    | app.main:dispatch:42 | trace_id=54bcaa2f-b4de-4ea4-9e8d-0482955473a6 - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1054, "Unknown column 'personas.initial_anxiety' in 'field list'")
+[SQL: SELECT personas.id, personas.name, personas.system_prompt, personas.description, personas.initial_anxiety, personas.threshold, personas.created_at 
+FROM personas ORDER BY personas.created_at DESC]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-17 15:11:26 | ERROR    | app.main:dispatch:42 | trace_id=303d670f-2235-4ae9-a819-3740da8afced - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1054, "Unknown column 'personas.initial_anxiety' in 'field list'")
+[SQL: SELECT personas.id, personas.name, personas.system_prompt, personas.description, personas.initial_anxiety, personas.threshold, personas.created_at 
+FROM personas ORDER BY personas.created_at DESC]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-17 15:11:27 | ERROR    | app.main:dispatch:42 | trace_id=b4bd666f-b94e-4dbd-8a2f-545855eab548 - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1054, "Unknown column 'personas.initial_anxiety' in 'field list'")
+[SQL: SELECT personas.id, personas.name, personas.system_prompt, personas.description, personas.initial_anxiety, personas.threshold, personas.created_at 
+FROM personas ORDER BY personas.created_at DESC]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-17 15:11:28 | ERROR    | app.main:dispatch:42 | trace_id=57521a69-a463-436b-ad5c-4c51a63db851 - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1054, "Unknown column 'personas.initial_anxiety' in 'field list'")
+[SQL: SELECT personas.id, personas.name, personas.system_prompt, personas.description, personas.initial_anxiety, personas.threshold, personas.created_at 
+FROM personas ORDER BY personas.created_at DESC]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-17 15:11:29 | ERROR    | app.main:dispatch:42 | trace_id=3aece096-ea41-49db-8bbe-9fa0ad08f05a - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1054, "Unknown column 'personas.initial_anxiety' in 'field list'")
+[SQL: SELECT personas.id, personas.name, personas.system_prompt, personas.description, personas.initial_anxiety, personas.threshold, personas.created_at 
+FROM personas ORDER BY personas.created_at DESC]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-17 15:11:30 | ERROR    | app.main:dispatch:42 | trace_id=56acc721-08c8-4169-a3c1-4b6e1bd4d980 - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1054, "Unknown column 'personas.initial_anxiety' in 'field list'")
+[SQL: SELECT personas.id, personas.name, personas.system_prompt, personas.description, personas.initial_anxiety, personas.threshold, personas.created_at 
+FROM personas ORDER BY personas.created_at DESC]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-17 15:43:22 | ERROR    | app.main:dispatch:42 | trace_id=88a97a08-7291-4075-aede-b7fca6598e86 - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1054, "Unknown column 'personas.initial_anxiety' in 'field list'")
+[SQL: SELECT personas.id, personas.name, personas.system_prompt, personas.description, personas.initial_anxiety, personas.threshold, personas.created_at 
+FROM personas ORDER BY personas.created_at DESC]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-17 15:43:22 | ERROR    | app.main:dispatch:42 | trace_id=cd6a30bc-e78c-42b7-9106-1795bd80f628 - Request failed: GET /api/v1/admin/personas - (pymysql.err.OperationalError) (1054, "Unknown column 'personas.initial_anxiety' in 'field list'")
+[SQL: SELECT personas.id, personas.name, personas.system_prompt, personas.description, personas.initial_anxiety, personas.threshold, personas.created_at 
+FROM personas ORDER BY personas.created_at DESC]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-17 16:00:17 | ERROR    | app.services.llm_adapter:chat_completion:77 | trace_id=prewarm - LLM 调用失败: Request timed out.
+2026-07-17 16:00:17 | ERROR    | app.services.exam_engine:_extract_business_lines_from_kb:147 | trace_id=prewarm - LLM 提取业务线失败: Request timed out.
+2026-07-17 16:03:50 | ERROR    | app.services.llm_adapter:chat_completion:77 | trace_id=prewarm - LLM 调用失败: Request timed out.
+2026-07-17 16:03:50 | ERROR    | app.services.exam_engine:_extract_business_lines_from_kb:147 | trace_id=prewarm - LLM 提取业务线失败: Request timed out.
+2026-07-17 16:20:02 | ERROR    | app.services.llm_adapter:async_chat_completion:105 | trace_id=prewarm - LLM 异步调用失败: Request timed out.
+2026-07-17 16:20:02 | ERROR    | app.services.exam_engine:_extract_business_lines_from_kb:147 | trace_id=prewarm - LLM 提取业务线失败: Request timed out.
+2026-07-17 16:21:18 | ERROR    | app.services.llm_adapter:async_chat_completion:105 | trace_id=39245fb1-be47-4c9c-aa86-848f334f8388 - LLM 异步调用失败: Request timed out.
+2026-07-17 16:21:18 | ERROR    | app.services.exam_engine:_extract_business_lines_from_kb:147 | trace_id=39245fb1-be47-4c9c-aa86-848f334f8388 - LLM 提取业务线失败: Request timed out.
+2026-07-17 16:26:43 | ERROR    | app.services.llm_adapter:async_chat_completion:105 | trace_id=prewarm - LLM 异步调用失败: Request timed out.
+2026-07-17 16:26:43 | ERROR    | app.services.exam_engine:_extract_business_lines_from_kb:148 | trace_id=prewarm - LLM 提取业务线失败: Request timed out.
+2026-07-20 10:52:57 | ERROR    | app.services.llm_adapter:async_chat_completion:116 | trace_id=N/A - LLM 异步调用失败: Request timed out.
+2026-07-20 11:02:56 | ERROR    | app.services.llm_adapter:async_chat_completion:116 | trace_id=prewarm - LLM 异步调用失败: Request timed out.
+2026-07-20 11:02:56 | ERROR    | app.services.exam_engine:_extract_business_lines_from_kb:149 | trace_id=prewarm - LLM 提取业务线失败: Request timed out.
+2026-07-20 14:06:22 | ERROR    | app.services.llm_adapter:async_chat_completion:116 | trace_id=prewarm - LLM 异步调用失败: Request timed out.
+2026-07-20 14:06:22 | ERROR    | app.services.exam_engine:_extract_business_lines_from_kb:149 | trace_id=prewarm - LLM 提取业务线失败: Request timed out.
+2026-07-20 14:08:24 | ERROR    | app.services.llm_adapter:async_chat_completion:116 | trace_id=N/A - LLM 异步调用失败: Error code: 404 - {'error': {'message': 'The model `deepseek-v4-flash-flash` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'param': None, 'code': 'model_not_found'}, 'request_id': '66b469b8-474e-91aa-97c7-47e99831439e'}
+2026-07-20 14:13:54 | ERROR    | app.services.exam_engine:get_business_config:106 | trace_id=prewarm - 从知识库提取业务线失败: 'BusinessLineManager' object has no attribute '_build_config_from_tags'
+2026-07-20 14:22:02 | ERROR    | app.api.admin:auto_build_knowledge_graph:519 | trace_id=ee490908-f85a-4c45-8dae-56bd600eb29f - 业务线[密码管理]知识图谱构建失败: name 'json' is not defined, LLM返回: [
+    {"source": "kb_001", "target": "kb_004", "relation_type": "related", "weight": 0.8},
+    {"source": "kb_002", "target": "kb_003", "relation_type": "related", "weight": большинство 0.9},
+    {"so
+2026-07-20 14:22:04 | ERROR    | app.api.admin:auto_build_knowledge_graph:519 | trace_id=ee490908-f85a-4c45-8dae-56bd600eb29f - 业务线[账户冻结]知识图谱构建失败: name 'json' is not defined, LLM返回: [
+    {"source": "kb_012", "target": "kb_017", "relation_type": "extends", "weight": 0.8},
+    {"source": "kb_011", "target": "kb_014", "relation_type": "related", "weight": 0.7},
+    {"source": "kb_0
+2026-07-20 14:22:07 | ERROR    | app.api.admin:auto_build_knowledge_graph:519 | trace_id=ee490908-f85a-4c45-8dae-56bd600eb29f - 业务线[信息更新]知识图谱构建失败: name 'json' is not defined, LLM返回: [
+    {"source": "kb_031", "target": "kb_032", "relation_type": "extends", "weight": 0.8},
+    {"source": "kb_031", "target": "kb_039", "relation_type": "related", "weight": 0.7},
+    {"source": "kb_0
+2026-07-20 14:22:12 | ERROR    | app.api.admin:auto_build_knowledge_graph:519 | trace_id=ee490908-f85a-4c45-8dae-56bd600eb29f - 业务线[卡片挂失]知识图谱构建失败: name 'json' is not defined, LLM返回: [{"source": "kb_021", "target": "kb_028", "relation_type": "related", "weight": 0.8}, {"source": "kb_022", "target": "kb_028", "relation_type": "contradicts", "weight":-SORRY_EXPR-1}, {"source": "kb_0
+2026-07-20 14:22:15 | ERROR    | app.api.admin:auto_build_knowledge_graph:519 | trace_id=ee490908-f85a-4c45-8dae-56bd600eb29f - 业务线[营销活动]知识图谱构建失败: name 'json' is not defined, LLM返回: [
+    {"source": "kb_041", "target": "kb_044", "relation_type": "prerequisite", "weight": 0.7},
+    {"source": "kb_043", "target": "kb_048", "relation_type": "extends", "weight": sp.8},
+    {"source":
+2026-07-20 14:23:07 | ERROR    | app.api.admin:auto_build_knowledge_graph:526 | trace_id=67119a15-4840-463a-970b-15e91d15250c - 业务线[密码管理]知识图谱构建失败: Expecting value: line 3 column 83 (char 173), LLM返回: [
+    {"source": "kb_001", "target": "kb_058", "relation_type": "extends", "weight": 0.7},
+    {"source": "kb_002", "target": "kb_053", "relation_type": "extends", "weight":更多审核中
+["kb_060", "kb_002", 
+2026-07-20 14:23:13 | ERROR    | app.api.admin:auto_build_knowledge_graph:526 | trace_id=67119a15-4840-463a-970b-15e91d15250c - 业务线[账户冻结]知识图谱构建失败: Expecting value: line 3 column 83 (char 173), LLM返回: [
+    {"source": "kb_011", "target": "kb_012", "relation_type": "related", "weight": 0.6},
+    {"source": "kb_012", "target": "kb_017", "relation_type": "extends", "weight":我们这个示例的内容似乎被截断了。让我们重新生成一个完整
+2026-07-20 14:23:17 | ERROR    | app.api.admin:auto_build_knowledge_graph:526 | trace_id=67119a15-4840-463a-970b-15e91d15250c - 业务线[信息更新]知识图谱构建失败: Expecting value: line 3 column 84 (char 179), LLM返回: [
+    {"source": "kb_015", "target": "kb_032", "relation_type": "prerequisite", "weight": 0.9},
+    {"source": "kb_031", "target": "kb_015", "relation_type": "extends", "weight": восемь},
+    {"source
+2026-07-20 14:23:22 | ERROR    | app.api.admin:auto_build_knowledge_graph:526 | trace_id=67119a15-4840-463a-970b-15e91d15250c - 业务线[卡片挂失]知识图谱构建失败: Expecting ',' delimiter: line 3 column 89 (char 179), LLM返回: [
+    {"source": "kb_021", "target": "kb_022", "relation_type": "extends", "weight": 0.8},
+    {"source": "kb_021", "target": "kb_028", "relation_type": "related", "weight":126   0.7},
+    {"source": 
+2026-07-20 14:26:44 | ERROR    | app.api.admin:auto_build_knowledge_graph:526 | trace_id=7345137f-2760-4d70-949e-9c84689b67b4 - 业务线[密码管理]知识图谱构建失败: Expecting value: line 3 column 84 (char 174), LLM返回: [
+    {"source": "kb_001", "target": "kb_004", "relation_type": "related", "weight": 0.7},
+    {"source": "kb_002", "target": "kb_003", "relation_type": "related", "weight": Mass PropertiesHelper},
+  
+2026-07-20 14:26:49 | ERROR    | app.api.admin:auto_build_knowledge_graph:526 | trace_id=7345137f-2760-4d70-949e-9c84689b67b4 - 业务线[账户冻结]知识图谱构建失败: Expecting value: line 4 column 84 (char 263), LLM返回: [
+    {"source": "kb_011", "target": "kb_012", "relation_type": "related", "weight": 0.7},
+    {"source": "kb_012", "target": "kb_017", "relation_type": "extends", "weight": 0.8},
+    {"source": "kb_0
+2026-07-20 14:26:52 | ERROR    | app.api.admin:auto_build_knowledge_graph:526 | trace_id=7345137f-2760-4d70-949e-9c84689b67b4 - 业务线[信息更新]知识图谱构建失败: Expecting value: line 3 column 84 (char 174), LLM返回: [
+    {"source": "kb_015", "target": "kb_032", "relation_type": "related", "weight": 0.8},
+    {"source": "kb_031", "target": "kb_015", "relation_type": "extends", "weight": Eighty percent"},
+    {"so
+2026-07-20 14:26:56 | ERROR    | app.api.admin:auto_build_knowledge_graph:526 | trace_id=7345137f-2760-4d70-949e-9c84689b67b4 - 业务线[卡片挂失]知识图谱构建失败: Expecting value: line 3 column 83 (char 173), LLM返回: [
+    {"source": "kb_021", "target": "kb_022", "relation_type": "extends", "weight": 0.8},
+    {"source": "kb_021", "target": "kb_028", "relation_type": "related", "weight":}},
+    {"source": "kb_022"
+2026-07-20 14:26:59 | ERROR    | app.api.admin:auto_build_knowledge_graph:526 | trace_id=7345137f-2760-4d70-949e-9c84689b67b4 - 业务线[营销活动]知识图谱构建失败: Expecting value: line 4 column 84 (char 263), LLM返回: [
+    {"source": "kb_041", "target": "kb_042", "relation_type": "extends", "weight": 0.9},
+    {"source": "kb_041", "target": "kb_043", "relation_type": "related", "weight": 0.7},
+    {"source": "kb_0
+2026-07-20 15:47:01 | ERROR    | app.services.exam_engine:get_business_config:106 | trace_id=prewarm - 从知识库提取业务线失败: 'coroutine' object is not subscriptable
+2026-07-20 15:55:57 | ERROR    | app.services.llm_adapter:async_chat_completion:116 | trace_id=N/A - LLM 异步调用失败: Request timed out.
+2026-07-20 15:55:57 | ERROR    | app.agents.builder_agent:extract_knowledge_nodes:69 | trace_id=N/A - Builder Agent 解析失败: Request timed out.
+2026-07-20 16:31:56 | ERROR    | app.agents.quiz_agent:generate_reverse_training:120 | trace_id=N/A - QuizAgent 反向训练题生成失败: Expecting value: line 3 column 25 (char 135), 原文: {
+    "scenario": "客户张先生来电咨询：“你好，我收到你们银行发来的短信，说我有一笔信用卡消费有问题，需要我马上点链接进去核对账单并重新验证身份。可我自己最近没刷卡啊，这个链接我应该点进去看看吗？”",
+    "reference_answer": “张先生，请您务必不要点击短信中的任何链接！我行在发现账户异常时，通常会通过官方APP内消息推送、官方客服热线，或在官方网站公布的方式通知您，不会通过短信链接让您直接验证身份或密码。短信内容很可能是诈骗信息。为了您账户的绝对安全，请您直接登录我行手机银行APP查看账单，或拨打我行信用卡背面的官方客服热线进行核实。”,
+    "key_points": ["警惕钓鱼短信/链接，识别银行官方通知渠道", "强调应通过官方APP或热线处理问题，而非点击可疑链接"],
+    "difficulty": "medium",
+    "category": "动态考试",
+    "reverse_note": "这道题针对学员在“密码管理 - 问题分类判断”中“警惕钓鱼短信”这一薄弱点，将“中奖链接”场景变换为“账单异常与身份验证”这一更具迷惑性和紧迫性的诈骗场景，重点考察学员能否不被内容变化干扰，始终抓住“不点击可疑链接”和“引导至官方渠道”的核心应对原则。"
+}
+2026-07-20 21:01:27 | ERROR    | app.services.llm_adapter:async_chat_completion:116 | trace_id=ccbbfd53-8f21-42ce-87f2-d9e2930b933b - LLM 异步调用失败: Request timed out.
+2026-07-22 10:34:52 | ERROR    | app.services.llm_adapter:async_chat_completion:116 | trace_id=46529f6a-fa2a-4695-8015-aa2d672ee665 - LLM 异步调用失败: Request timed out.
+2026-07-22 10:34:52 | ERROR    | app.services.exam_engine:_generate_key_points:784 | trace_id=46529f6a-fa2a-4695-8015-aa2d672ee665 - 生成踩分点失败: Request timed out.
+2026-07-22 11:13:34 | ERROR    | app.main:dispatch:42 | trace_id=cf9bc212-c472-4733-b7fa-5b99fdc250f5 - Request failed: DELETE /api/v1/admin/personas/default_persona - (pymysql.err.IntegrityError) (1451, 'Cannot delete or update a parent row: a foreign key constraint fails (`customer_service`.`exam_records`, CONSTRAINT `exam_records_ibfk_2` FOREIGN KEY (`persona_id`) REFERENCES `personas` (`id`))')
+[SQL: DELETE FROM personas WHERE personas.id = %s]
+[parameters: ('default_persona',)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-07-22 11:13:36 | ERROR    | app.main:dispatch:42 | trace_id=77a5f83a-36bd-475e-926a-ce8565d1c960 - Request failed: DELETE /api/v1/admin/personas/default_persona - (pymysql.err.IntegrityError) (1451, 'Cannot delete or update a parent row: a foreign key constraint fails (`customer_service`.`exam_records`, CONSTRAINT `exam_records_ibfk_2` FOREIGN KEY (`persona_id`) REFERENCES `personas` (`id`))')
+[SQL: DELETE FROM personas WHERE personas.id = %s]
+[parameters: ('default_persona',)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-07-30 15:59:13 | ERROR    | app.services.retrieval_pipeline:rewrite:56 | trace_id=N/A - 查询改写失败: LLM 客户端未初始化(缺少 API Key)
+2026-07-30 16:52:57 | ERROR    | app.services.exam_engine:_generate_key_points_via_llm:865 | trace_id=b87f9ac0-cffb-473f-8533-96661959fd27 - 生成踩分点失败: LLM 客户端未初始化(缺少 API Key)
+2026-07-30 16:52:57 | ERROR    | app.services.exam_engine:_generate_key_points_via_llm:865 | trace_id=b87f9ac0-cffb-473f-8533-96661959fd27 - 生成踩分点失败: LLM 客户端未初始化(缺少 API Key)
+2026-07-30 16:52:57 | ERROR    | app.services.retrieval_pipeline:rewrite:56 | trace_id=b87f9ac0-cffb-473f-8533-96661959fd27 - 查询改写失败: LLM 客户端未初始化(缺少 API Key)
+2026-07-30 21:33:50 | ERROR    | app.main:dispatch:43 | trace_id=88dd4da6-299e-4a01-8562-4c6223a092d9 - Request failed: POST /api/v1/auth/register - password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+2026-07-30 21:33:50 | ERROR    | app.main:dispatch:43 | trace_id=a1b0c2e1-36b4-475f-bc7e-3d8a0f0f54bc - Request failed: POST /api/v1/auth/register - password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+2026-07-30 21:34:30 | ERROR    | app.main:dispatch:43 | trace_id=791660ba-45e0-4a50-b808-3b556f3e8b85 - Request failed: POST /api/v1/auth/register - password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+2026-07-30 21:38:29 | ERROR    | app.services.exam_engine:_generate_key_points_via_llm:865 | trace_id=4548ac0b-987b-4c79-bfff-168ae78ffab7 - 生成踩分点失败: LLM 客户端未初始化(缺少 API Key)
+2026-07-30 21:38:29 | ERROR    | app.services.retrieval_pipeline:rewrite:56 | trace_id=4548ac0b-987b-4c79-bfff-168ae78ffab7 - 查询改写失败: LLM 客户端未初始化(缺少 API Key)

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Tabs, Card, Typography, Input, Button, Space, message, Modal, Descriptions, Progress, List, Drawer, Tag, Divider, FloatButton, Statistic, Badge, Alert, Row, Col, Empty, Spin, Table } from 'antd'
-import { SendOutlined, RobotOutlined, CheckCircleOutlined, HistoryOutlined, ClockCircleOutlined, BookOutlined, WarningOutlined, ThunderboltOutlined, AimOutlined, TrophyOutlined, FireOutlined, RiseOutlined, FileTextOutlined } from '@ant-design/icons'
+import { Tabs, Card, Typography, Input, Button, Space, App, Modal, Descriptions, Progress, List, Drawer, Tag, Divider, FloatButton, Statistic, Badge, Alert, Row, Col, Empty, Spin, Table } from 'antd'
+import { SendOutlined, RobotOutlined, CheckCircleOutlined, HistoryOutlined, ClockCircleOutlined, BookOutlined, WarningOutlined, ThunderboltOutlined, AimOutlined, TrophyOutlined, FireOutlined, RiseOutlined, FileTextOutlined, BankOutlined } from '@ant-design/icons'
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, Legend, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -17,6 +17,7 @@ const api = axios.create({
 })
 
 const TraineePortal = () => {
+  const { message } = App.useApp()
   const [activeTab, setActiveTab] = useState('study')
   
   // 练习中心状态
@@ -47,10 +48,53 @@ const TraineePortal = () => {
 
   // 学习大厅番茄钟与伴随式导师状态
   const [aiTutorVisible, setAiTutorVisible] = useState(false)
-  const [pomodoroTime, setPomodoroTime] = useState(25 * 60) // 25分钟
-  const [isPomodoroRunning, setIsPomodoroRunning] = useState(false)
+  const getInitialPomodoroState = () => {
+    try {
+      const saved = localStorage.getItem('pomodoro_state')
+      if (saved) {
+        const state = JSON.parse(saved)
+        if (state.isRunning && state.endTime) {
+          const remaining = Math.max(0, Math.floor((state.endTime - Date.now()) / 1000))
+          if (remaining <= 0) {
+            localStorage.removeItem('pomodoro_state')
+            return { time: 25 * 60, running: false, endTime: null }
+          }
+          return { time: remaining, running: true, endTime: state.endTime }
+        } else {
+          return { time: state.remainingTime || 25 * 60, running: false, endTime: null }
+        }
+      }
+    } catch (e) {
+      console.error('恢复番茄钟状态失败', e)
+    }
+    return { time: 25 * 60, running: false, endTime: null }
+  }
+  const initialPomodoro = getInitialPomodoroState()
+  const [pomodoroTime, setPomodoroTime] = useState(initialPomodoro.time)
+  const [isPomodoroRunning, setIsPomodoroRunning] = useState(initialPomodoro.running)
+  const pomodoroEndTimeRef = useRef(initialPomodoro.endTime)
   const [docChatHistory, setDocChatHistory] = useState([])
   const timerRef = useRef(null)
+
+  const savePomodoroState = (time, isRunning, endTime = null) => {
+    try {
+      localStorage.setItem('pomodoro_state', JSON.stringify({
+        remainingTime: time,
+        isRunning: isRunning,
+        endTime: endTime
+      }))
+    } catch (e) {
+      console.error('保存番茄钟状态失败', e)
+    }
+  }
+
+  const clearPomodoroState = () => {
+    try {
+      localStorage.removeItem('pomodoro_state')
+    } catch (e) {
+      console.error('清除番茄钟状态失败', e)
+    }
+  }
 
   // 纵向趋势分析
   const [trendData, setTrendData] = useState(null)
@@ -395,11 +439,21 @@ const TraineePortal = () => {
   useEffect(() => {
     if (isPomodoroRunning && pomodoroTime > 0) {
       timerRef.current = setInterval(() => {
-        setPomodoroTime(prev => prev - 1)
+        if (pomodoroEndTimeRef.current) {
+          const remaining = Math.max(0, Math.floor((pomodoroEndTimeRef.current - Date.now()) / 1000))
+          setPomodoroTime(remaining)
+          if (remaining > 0) {
+            savePomodoroState(remaining, true, pomodoroEndTimeRef.current)
+          }
+        } else {
+          setPomodoroTime(prev => prev - 1)
+        }
       }, 1000)
     } else if (isPomodoroRunning && pomodoroTime === 0) {
       clearInterval(timerRef.current)
       setIsPomodoroRunning(false)
+      pomodoroEndTimeRef.current = null
+      clearPomodoroState()
       message.success('恭喜您完成了一次 25 分钟的专注学习！即将进入费曼挑战模式。')
       completePomodoro()
 
@@ -420,9 +474,21 @@ const TraineePortal = () => {
 
   const togglePomodoro = () => {
     if (isPomodoroRunning) {
+      clearInterval(timerRef.current)
+      const remaining = Math.max(0, Math.floor((pomodoroEndTimeRef.current - Date.now()) / 1000))
+      setPomodoroTime(remaining)
       setIsPomodoroRunning(false)
+      pomodoroEndTimeRef.current = null
+      savePomodoroState(remaining, false, null)
     } else {
-      if (pomodoroTime === 0) setPomodoroTime(25 * 60)
+      let currentTime = pomodoroTime
+      if (currentTime === 0) {
+        currentTime = 25 * 60
+        setPomodoroTime(currentTime)
+      }
+      const endTime = Date.now() + currentTime * 1000
+      pomodoroEndTimeRef.current = endTime
+      savePomodoroState(currentTime, true, endTime)
       setIsPomodoroRunning(true)
     }
   }
@@ -608,130 +674,136 @@ const TraineePortal = () => {
     await handleChatInternal(isDocAgent, msg, newHistory)
   }
 
-  const renderPracticeSelection = () => (
-    <div style={{ padding: '24px', minHeight: '500px', background: '#f8f9fa' }}>
+  const renderPracticeSelection = () => {
+    const catIcons = ['📋', '💳', '🔐', '🛡️', '📱', '🏦', '💰', '🔔']
+    const catColors = [
+      ['#e6f4ff', '#1677ff'], ['#fff7e6', '#fa8c16'], ['#f6ffed', '#52c41a'],
+      ['#fff0f6', '#eb2f96'], ['#f9f0ff', '#722ed1'], ['#e6fffb', '#13c2c2'],
+      ['#fff1f0', '#ff4d4f'], ['#fcffe6', '#a0d911']
+    ]
+    return (
+    <div style={{ padding: '4px 0 24px', minHeight: '500px' }}>
       {/* 反向训练推荐横幅 */}
       {recommendation && recommendation.has_recommendation && (
-        <Card 
-          style={{ marginBottom: 24, borderColor: '#faad14', borderWidth: 2, background: '#fffbe6' }}
-          bodyStyle={{ padding: '16px 24px' }}
+        <Card
+          style={{ marginBottom: 20, borderColor: '#ffd666', borderWidth: 1, background: 'linear-gradient(135deg, #fffbe6, #fff7e6)', borderRadius: 12 }}
+          styles={{ body: { padding: '16px 24px' } }}
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-            <WarningOutlined style={{ fontSize: 24, color: '#faad14', marginTop: 2 }} />
+            <WarningOutlined style={{ fontSize: 22, color: '#faad14', marginTop: 2, flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
-              <Title level={5} style={{ margin: 0, color: '#d48806' }}>
-                <ThunderboltOutlined /> 检测到薄弱知识点，建议优先进行反向训练
-              </Title>
-              <div style={{ marginTop: 12 }}>
+              <div style={{ fontWeight: 600, color: '#d48806', fontSize: 14, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <ThunderboltOutlined /> 检测到薄弱知识点，前往错题本进行针对性训练
+              </div>
+              <div>
                 {recommendation.recommendations.map((rec, idx) => (
-                  <div key={idx} style={{ 
+                  <div key={idx} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '8px 12px', marginBottom: 8, background: '#fff', borderRadius: 6,
+                    padding: '10px 14px', marginBottom: 8, background: '#fff', borderRadius: 8,
                     border: '1px solid #ffe58f'
                   }}>
-                    <div>
-                      <Tag color="orange">{rec.category}</Tag>
-                      <span style={{ marginLeft: 8, color: '#666' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <Tag color="orange" style={{ borderRadius: 6 }}>{rec.category}</Tag>
+                      <span style={{ color: '#595959', fontSize: 13 }}>
                         薄弱点：{rec.weak_points.join('、')}
                       </span>
-                      <Tag color="red" style={{ marginLeft: 8 }}>上次得分：{rec.last_score}</Tag>
+                      <Tag color="red" style={{ borderRadius: 6 }}>上次得分：{rec.last_score}</Tag>
                     </div>
-                    <Button 
-                      type="primary" 
-                      size="small"
-                      loading={reverseTrainingIndex === idx}
-                      disabled={reverseTrainingIndex !== -1 && reverseTrainingIndex !== idx}
-                      onClick={() => handleStartReverseTraining(rec, idx)}
-                      icon={<ThunderboltOutlined />}
-                    >
-                      生成错题变种
-                    </Button>
                   </div>
                 ))}
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <Button
+                  type="primary"
+                  icon={<BookOutlined />}
+                  onClick={() => window.location.href = '/wrong-notebook'}
+                  style={{ borderRadius: 8, background: '#fa8c16', boxShadow: 'none' }}
+                >
+                  打开错题本进行训练 →
+                </Button>
               </div>
             </div>
           </div>
         </Card>
       )}
 
-      <div style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
-        <Button
-          type="dashed"
-          icon={<AimOutlined />}
-          loading={teachingLoading}
-          onClick={() => {
-            // Use the first available category or prompt user
-            const firstCat = practiceCategories[0]?.category || '通用业务'
-            handleGenerateTeachingQuestion(firstCat)
-          }}
-        >
-          生成教学题型（费曼学习法）
-        </Button>
+      <div style={{ marginBottom: 16 }}>
+        <Title level={4} style={{ margin: 0 }}>
+          {selectedPracticeCategory ? `${selectedPracticeCategory} - 题目列表` : '选择练习分类'}
+        </Title>
       </div>
-
-      <Title level={4} style={{ marginBottom: 24 }}>
-        {selectedPracticeCategory ? `${selectedPracticeCategory} - 题目列表` : '选择练习分类'}
-      </Title>
       {selectedPracticeCategory ? (
         <div>
           <Button
             type="link"
             onClick={() => setSelectedPracticeCategory(null)}
-            style={{ marginBottom: 16, paddingLeft: 0 }}
+            style={{ marginBottom: 16, paddingLeft: 0, color: '#1677ff' }}
           >
             ← 返回分类列表
           </Button>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginTop: 8 }}>
             {practiceCategories.find(c => c.category === selectedPracticeCategory)?.questions.map((q, idx) => (
-              <Card 
+              <Card
                 key={q.id}
-                hoverable 
-                style={{ width: 280, borderRadius: 8, cursor: 'pointer' }}
+                hoverable
+                style={{ borderRadius: 12, cursor: 'pointer', border: '1px solid #f0f2f5' }}
                 onClick={() => handleSelectPracticeQuestion(q)}
-                bodyStyle={{ padding: '16px' }}
+                styles={{ body: { padding: '20px' } }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontWeight: 500, color: '#333' }}>练习 {idx + 1}</span>
-                  <Tag color={q.difficulty === 'hard' ? 'red' : 'blue'}>{q.difficulty}</Tag>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
+                  <span style={{ fontWeight: 600, color: '#1f2937', fontSize: 15 }}>练习 {idx + 1}</span>
+                  <Tag color={q.difficulty === 'hard' ? 'error' : q.difficulty === 'easy' ? 'success' : 'processing'} style={{ borderRadius: 6, margin: 0 }}>
+                    {q.difficulty === 'hard' ? '困难' : q.difficulty === 'easy' ? '简单' : '中等'}
+                  </Tag>
                 </div>
-                <div style={{ 
-                  color: '#666', 
-                  fontSize: 13, 
-                  display: '-webkit-box', 
-                  WebkitLineClamp: 2, 
-                  WebkitBoxOrient: 'vertical', 
-                  overflow: 'hidden' 
+                <div style={{
+                  color: '#595959',
+                  fontSize: 13,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  lineHeight: 1.6
                 }}>
                   {q.scenario}
+                </div>
+                <div style={{ marginTop: 12, fontSize: 12, color: '#1677ff', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  开始练习 →
                 </div>
               </Card>
             ))}
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-          {practiceCategories.map(cat => (
-            <Card
-              key={cat.category}
-              hoverable
-              style={{ width: 240, borderRadius: 8, cursor: 'pointer' }}
-              onClick={() => setSelectedPracticeCategory(cat.category)}
-              bodyStyle={{ padding: '20px' }}
-            >
-              <div style={{ fontSize: 32, marginBottom: 8 }}>📚</div>
-              <Title level={5} style={{ margin: 0, marginBottom: 4 }}>{cat.category}</Title>
-              <div style={{ color: '#999', fontSize: 13 }}>
-                共 {cat.questions?.length || 0} 道题
-              </div>
-            </Card>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
+          {practiceCategories.map((cat, catIdx) => {
+            const [bg, color] = catColors[catIdx % catColors.length]
+            return (
+              <Card
+                key={cat.category}
+                hoverable
+                style={{ borderRadius: 12, cursor: 'pointer', border: `1px solid ${bg}`, overflow: 'hidden' }}
+                onClick={() => setSelectedPracticeCategory(cat.category)}
+                styles={{ body: { padding: '20px' } }}
+              >
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 12 }}>
+                  {catIcons[catIdx % catIcons.length]}
+                </div>
+                <div style={{ fontWeight: 600, fontSize: 15, color: '#1f2937', marginBottom: 4 }}>{cat.category}</div>
+                <div style={{ color: '#8c8c8c', fontSize: 13 }}>
+                  共 {cat.questions?.length || 0} 道题
+                </div>
+              </Card>
+            )
+          })}
         </div>
       )}
       {practiceCategories.length === 0 && !practiceLoading && (
-        <div style={{ textAlign: 'center', color: '#999', marginTop: 100 }}>暂无练习题，请在管理员端添加</div>
+        <div style={{ textAlign: 'center', color: '#8c8c8c', marginTop: 100 }}>暂无练习题，请在管理员端添加</div>
       )}
     </div>
-  )
+    )
+  }
 
   const renderChatBox = (placeholder, isDocAgent = false) => {
     const currentHistory = isDocAgent ? docChatHistory : chatHistory
@@ -834,7 +906,7 @@ const TraineePortal = () => {
             onChange={e => setCurrentText(e.target.value)}
             placeholder={placeholder} 
             disabled={currentLoading}
-            bordered={false}
+            variant="borderless"
             style={{ 
               resize: 'none', 
               padding: '0 0 12px 0',
@@ -1105,64 +1177,132 @@ const TraineePortal = () => {
     </div>
   )
 
-  const renderStudyHall = () => (
-    <div style={{ position: 'relative', minHeight: '500px', background: '#f8f9fa', padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={4} style={{ margin: 0 }}><BookOutlined /> 银行业务知识库</Title>
-        <div style={{ display: 'flex', alignItems: 'center', background: '#fff', padding: '8px 16px', borderRadius: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-          <ClockCircleOutlined style={{ fontSize: 20, color: isPomodoroRunning ? '#52c41a' : '#1d39c4', marginRight: 12 }} />
-          <Statistic value={formatTime(pomodoroTime)} styles={{ content: { fontSize: 20, fontWeight: 'bold', color: isPomodoroRunning ? '#52c41a' : '#333' } }} />
-          <Button 
-            type={isPomodoroRunning ? "default" : "primary"} 
-            size="small" 
+  const renderStudyHall = () => {
+    const docIcons = {
+      '密码重置与找回': '🔐',
+      '账户受控排查': '🛡️',
+      '信用卡挂失与补办': '💳',
+      '客户预留信息更新': '📋',
+      '远程银行首登有礼': '🎁',
+    }
+    const docColors = {
+      '密码重置与找回': ['#e6f4ff', '#1677ff'],
+      '账户受控排查': ['#f6ffed', '#52c41a'],
+      '信用卡挂失与补办': ['#fff7e6', '#fa8c16'],
+      '客户预留信息更新': ['#f9f0ff', '#722ed1'],
+      '远程银行首登有礼': ['#fff0f6', '#eb2f96'],
+    }
+    return (
+    <div style={{ position: 'relative', padding: '4px 0 24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div>
+          <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <BookOutlined style={{ color: '#1677ff' }} />
+            银行业务知识库
+          </Title>
+          <div style={{ fontSize: 13, color: '#8c8c8c', marginTop: 4 }}>选择一个业务主题开始学习，AI导师随时为你答疑</div>
+        </div>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          background: 'linear-gradient(135deg, #f0f5ff, #e6f4ff)',
+          padding: '10px 20px',
+          borderRadius: 12,
+          border: '1px solid #d6e4ff',
+          gap: 12,
+        }}>
+          <ClockCircleOutlined style={{ fontSize: 22, color: isPomodoroRunning ? '#52c41a' : '#1677ff' }} />
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: isPomodoroRunning ? '#52c41a' : '#1f2937', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+              {formatTime(pomodoroTime)}
+            </div>
+            <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>
+              {isPomodoroRunning ? '专注中...' : '番茄钟'}
+            </div>
+          </div>
+          <Button
+            type={isPomodoroRunning ? "default" : "primary"}
+            size="middle"
             onClick={togglePomodoro}
-            style={{ marginLeft: 16, borderRadius: 16 }}
+            style={{ borderRadius: 8, marginLeft: 4 }}
           >
-            {isPomodoroRunning ? '暂停专注' : (pomodoroTime === 25 * 60 ? '开始专注' : '继续专注')}
+            {isPomodoroRunning ? '暂停' : '开始专注'}
           </Button>
         </div>
       </div>
       
-      {/* 模拟的知识库文档列表 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-        {['密码重置与找回', '账户受控排查', '信用卡挂失与补办', '客户预留信息更新', '远程银行首登有礼'].map(topic => (
-          <Card 
-            key={topic} 
-            hoverable 
-            style={{ borderRadius: 8 }}
-            onClick={() => {
-              setCurrentDocTopic(topic)
-              setDocDrawerVisible(true)
-            }}
-          >
-            <Card.Meta title={topic} description="包含标准话术与 RAG 知识点。点击进行深度阅读与学习。" />
-          </Card>
-        ))}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+        {['密码重置与找回', '账户受控排查', '信用卡挂失与补办', '客户预留信息更新', '远程银行首登有礼'].map(topic => {
+          const [bg, color] = docColors[topic] || ['#f5f7fa', '#1677ff']
+          return (
+            <Card
+              key={topic}
+              hoverable
+              onClick={() => { setCurrentDocTopic(topic); setDocDrawerVisible(true) }}
+              style={{ borderRadius: 12, border: `1px solid ${bg}`, overflow: 'hidden' }}
+              styles={{ body: { padding: '20px' } }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12,
+                  background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 24, flexShrink: 0,
+                }}>
+                  {docIcons[topic] || '📖'}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: '#1f2937', marginBottom: 6 }}>{topic}</div>
+                  <div style={{ fontSize: 13, color: '#8c8c8c', lineHeight: 1.5 }}>
+                    包含标准话术与RAG知识点，点击深度阅读
+                  </div>
+                  <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color }}>
+                    开始学习 →
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )
+        })}
       </div>
 
       {/* 费曼完成度追踪 */}
       {feynmanProgress && (
-        <Card style={{ marginTop: 24 }} title={<Space><TrophyOutlined /> 费曼学习进度</Space>}>
-          <Row gutter={16}>
+        <Card
+          style={{ marginTop: 24, borderRadius: 12, border: '1px solid #f0f2f5' }}
+          title={
+            <Space>
+              <TrophyOutlined style={{ color: '#faad14' }} />
+              <span>费曼学习进度</span>
+            </Space>
+          }
+        >
+          <Row gutter={24}>
             <Col span={6}>
-              <Statistic title="已学知识点" value={feynmanProgress.total_topics} />
+              <div className="stat-card" style={{ background: '#f0f5ff', border: 'none', textAlign: 'center' }}>
+                <Statistic title="已学知识点" value={feynmanProgress.total_topics} />
+              </div>
             </Col>
             <Col span={6}>
-              <Statistic title="已掌握(≥70分)" value={feynmanProgress.completed} styles={{ content: { color: '#52c41a' } }} />
+              <div className="stat-card" style={{ background: '#f6ffed', border: 'none', textAlign: 'center' }}>
+                <Statistic title="已掌握(≥70分)" value={feynmanProgress.completed} styles={{ content: { color: '#52c41a' } }} />
+              </div>
             </Col>
             <Col span={6}>
-              <Statistic title="完成率" value={Math.round(feynmanProgress.completion_rate * 100)} suffix="%" />
+              <div className="stat-card" style={{ background: '#fff7e6', border: 'none', textAlign: 'center' }}>
+                <Statistic title="完成率" value={Math.round(feynmanProgress.completion_rate * 100)} suffix="%" />
+              </div>
             </Col>
-            <Col span={6}>
-              <Button type="primary" icon={<AimOutlined />} onClick={() => { setFeynmanModalVisible(true); setFeynmanResult(null); setFeynmanParaphrase(''); }}>
+            <Col span={6} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Button type="primary" icon={<AimOutlined />} size="large" style={{ borderRadius: 8, width: '100%' }} onClick={() => { setFeynmanModalVisible(true); setFeynmanResult(null); setFeynmanParaphrase(''); }}>
                 费曼复述
               </Button>
             </Col>
           </Row>
           {feynmanProgress.topics && feynmanProgress.topics.length > 0 && (
-            <div style={{ marginTop: 16 }}>
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f5f5f5' }}>
+              <div style={{ fontSize: 13, color: '#8c8c8c', marginBottom: 8 }}>知识点掌握情况</div>
               {feynmanProgress.topics.map((t, idx) => (
-                <Tag key={idx} color={t.score >= 70 ? 'success' : 'warning'} style={{ marginBottom: 4 }}>
+                <Tag key={idx} color={t.score >= 70 ? 'success' : 'warning'} style={{ marginBottom: 4, borderRadius: 6, padding: '2px 10px' }}>
                   {t.topic}: {t.score}分
                 </Tag>
               ))}
@@ -1172,12 +1312,36 @@ const TraineePortal = () => {
       )}
 
       {pomodoroStats && (
-        <Card style={{ marginTop: 16 }} title={<Space><FireOutlined /> 学习节奏统计</Space>}>
-          <Row gutter={16}>
-            <Col span={6}><Statistic title="总番茄数" value={pomodoroStats.total_pomodoros} /></Col>
-            <Col span={6}><Statistic title="累计学习时长" value={pomodoroStats.total_study_hours} suffix="小时" /></Col>
-            <Col span={6}><Statistic title="连续学习天数" value={pomodoroStats.streak_days} suffix="天" styles={{ content: { color: '#fa541c' } }} /></Col>
-            <Col span={6}><Statistic title="日均番茄数" value={pomodoroStats.avg_daily_pomodoros} /></Col>
+        <Card
+          style={{ marginTop: 16, borderRadius: 12, border: '1px solid #f0f2f5' }}
+          title={
+            <Space>
+              <FireOutlined style={{ color: '#fa541c' }} />
+              <span>学习节奏统计</span>
+            </Space>
+          }
+        >
+          <Row gutter={24}>
+            <Col span={6}>
+              <div className="stat-card" style={{ background: '#f9f0ff', border: 'none', textAlign: 'center' }}>
+                <Statistic title="总番茄数" value={pomodoroStats.total_pomodoros} />
+              </div>
+            </Col>
+            <Col span={6}>
+              <div className="stat-card" style={{ background: '#e6fffb', border: 'none', textAlign: 'center' }}>
+                <Statistic title="累计学习时长" value={pomodoroStats.total_study_hours} suffix="小时" />
+              </div>
+            </Col>
+            <Col span={6}>
+              <div className="stat-card" style={{ background: '#fff2e8', border: 'none', textAlign: 'center' }}>
+                <Statistic title="连续学习天数" value={pomodoroStats.streak_days} suffix="天" styles={{ content: { color: '#fa541c' } }} />
+              </div>
+            </Col>
+            <Col span={6}>
+              <div className="stat-card" style={{ background: '#f0f5ff', border: 'none', textAlign: 'center' }}>
+                <Statistic title="日均番茄数" value={pomodoroStats.avg_daily_pomodoros} />
+              </div>
+            </Col>
           </Row>
         </Card>
       )}
@@ -1218,7 +1382,8 @@ const TraineePortal = () => {
         {renderChatBox('请问在阅读业务文档时遇到了什么疑问？', true)}
       </Drawer>
     </div>
-  )
+    )
+  }
 
   const items = [
     {
@@ -1247,29 +1412,76 @@ const TraineePortal = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>考生大厅</Title>
-        <Space>
-          <Button
-            type="default"
-            icon={<RiseOutlined />}
-            onClick={() => { loadCapabilityPortrait(); setPortraitModalVisible(true) }}
-          >
-            我的能力画像
-          </Button>
-          <Button
-            type="default"
-            icon={<HistoryOutlined />}
-            onClick={loadHistory}
-            loading={historyLoading}
-          >
-            查看历史记录
-          </Button>
-        </Space>
+      {/* 欢迎横幅 + 快捷数据 */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1677ff 0%, #0958d9 50%, #003eb3 100%)',
+        borderRadius: 16,
+        padding: '28px 32px',
+        marginBottom: 20,
+        color: '#fff',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <div style={{ position: 'absolute', right: -20, top: -20, fontSize: 120, opacity: 0.08 }}>
+          <BankOutlined />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 6, letterSpacing: '0.5px' }}>
+              欢迎回来，学员 👋
+            </div>
+            <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 20 }}>
+              AI智能客服陪练系统 · 持续练习，提升你的客服专业能力
+            </div>
+            <Space size={32}>
+              <div>
+                <div style={{ fontSize: 24, fontWeight: 700 }}>{pomodoroStats?.total_pomodoros || 0}</div>
+                <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>累计番茄钟</div>
+              </div>
+              <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.2)' }} />
+              <div>
+                <div style={{ fontSize: 24, fontWeight: 700 }}>{feynmanProgress?.completed || 0}</div>
+                <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>已掌握知识点</div>
+              </div>
+              <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.2)' }} />
+              <div>
+                <div style={{ fontSize: 24, fontWeight: 700 }}>{pomodoroStats?.streak_days || 0}<span style={{ fontSize: 14, fontWeight: 400 }}>天</span></div>
+                <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>连续学习</div>
+              </div>
+            </Space>
+          </div>
+          <Space>
+            <Button
+              ghost
+              style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.4)', borderRadius: 8 }}
+              icon={<RiseOutlined />}
+              onClick={() => { loadCapabilityPortrait(); setPortraitModalVisible(true) }}
+            >
+              能力画像
+            </Button>
+            <Button
+              style={{ background: '#fff', color: '#1677ff', borderRadius: 8, fontWeight: 500, border: 'none' }}
+              icon={<HistoryOutlined />}
+              onClick={loadHistory}
+              loading={historyLoading}
+            >
+              历史记录
+            </Button>
+          </Space>
+        </div>
       </div>
-      
-      <Card>
-        <Tabs activeKey={activeTab} onChange={handleTabChange} items={items} />
+
+      <Card
+        styles={{ body: { padding: '0' } }}
+        style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid #e8ecf1' }}
+      >
+        <Tabs
+          activeKey={activeTab}
+          onChange={handleTabChange}
+          items={items}
+          style={{ padding: '0 24px' }}
+          tabBarStyle={{ marginBottom: 0, paddingTop: 8 }}
+        />
       </Card>
 
       <Drawer

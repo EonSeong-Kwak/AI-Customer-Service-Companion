@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Typography, Table, Button, Space, Modal, Form, Input, message, Popconfirm, Tag, Row, Col, Select } from 'antd'
+import { Typography, Table, Button, Space, Modal, Form, Input, App, Popconfirm, Tag, Row, Col, Select } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import axios from 'axios'
 import { API_BASE } from './constants'
@@ -8,6 +8,7 @@ const { TextArea } = Input
 
 // ===== V3.4: 项目场景配置（PBL）子组件 =====
 const ProjectScenariosTab = () => {
+  const { message } = App.useApp()
   const [scenarios, setScenarios] = useState([])
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
@@ -160,7 +161,7 @@ const ProjectScenariosTab = () => {
         onOk={handleSave}
         onCancel={() => setModalVisible(false)}
         width={800}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical">
           <Form.Item name="name" label="项目名称" rules={[{ required: true, message: '请输入项目名称' }]}>

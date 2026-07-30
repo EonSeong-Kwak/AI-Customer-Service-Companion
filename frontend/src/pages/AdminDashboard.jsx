@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Graph as G6Graph } from '@antv/g6'
-import { Typography, Card, Tabs, Table, Button, Space, Modal, Form, Input, message, Popconfirm, Tag, Upload, Statistic, Row, Col, Select, Drawer, Divider, Checkbox } from 'antd'
+import { Typography, Card, Tabs, Table, Button, Space, Modal, Form, Input, App, Popconfirm, Tag, Upload, Statistic, Row, Col, Select, Drawer, Divider, Checkbox } from 'antd'
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, DashboardOutlined, FileTextOutlined,
   WarningOutlined, ThunderboltOutlined, ArrowLeftOutlined, UserOutlined, ProjectOutlined, ApiOutlined,
@@ -69,6 +69,7 @@ const PERSONA_TAG_GROUPS = [
 ]
 
 const AdminDashboard = () => {
+  const { message } = App.useApp()
   const [activeTab, setActiveTab] = useState(null)
   const [loading, setLoading] = useState(false)
   
@@ -884,27 +885,51 @@ const AdminDashboard = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <Title level={3} style={{ margin: 0 }}>系统配置大厅</Title>
-        <Space>
-          {prewarmStatus.status === 'ready' ? (
-            <Tag color="success">业务线分类已就绪（{prewarmStatus.business_lines?.length || 0} 条）</Tag>
-          ) : prewarmStatus.status === 'prewarming' ? (
-            <Tag color="processing">业务线分类预热中...</Tag>
-          ) : (
-            <Tag color="warning">业务线分类未预热</Tag>
-          )}
-          <Button
-            type={prewarmStatus.status === 'ready' ? 'default' : 'primary'}
-            loading={prewarming || prewarmStatus.status === 'prewarming'}
-            onClick={handlePrewarm}
-          >
-            {prewarmStatus.status === 'ready' ? '重新预热业务线' : '预热业务线分类'}
-          </Button>
-        </Space>
+      {/* 管理员顶部横幅 */}
+      <div style={{
+        background: 'linear-gradient(135deg, #001529 0%, #003eb3 100%)',
+        borderRadius: 16,
+        padding: '24px 28px',
+        marginBottom: 20,
+        color: '#fff',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <div style={{ position: 'absolute', right: -10, top: -20, fontSize: 100, opacity: 0.06 }}>
+          <DashboardOutlined />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, letterSpacing: '0.5px' }}>
+              系统配置大厅
+            </div>
+            <div style={{ fontSize: 13, opacity: 0.75 }}>
+              管理培训内容、知识库、Coze工作流与数据分析
+            </div>
+          </div>
+          <Space size={12}>
+            {prewarmStatus.status === 'ready' ? (
+              <Tag color="success" style={{ borderRadius: 6, fontSize: 12, padding: '2px 10px' }}>
+                ✓ 业务线就绪（{prewarmStatus.business_lines?.length || 0} 条）
+              </Tag>
+            ) : prewarmStatus.status === 'prewarming' ? (
+              <Tag color="processing" style={{ borderRadius: 6, fontSize: 12 }}>预热中...</Tag>
+            ) : (
+              <Tag color="warning" style={{ borderRadius: 6, fontSize: 12 }}>未预热</Tag>
+            )}
+            <Button
+              type={prewarmStatus.status === 'ready' ? 'default' : 'primary'}
+              loading={prewarming || prewarmStatus.status === 'prewarming'}
+              onClick={handlePrewarm}
+              style={{ borderRadius: 8, background: prewarmStatus.status === 'ready' ? 'rgba(255,255,255,0.15)' : undefined, borderColor: prewarmStatus.status === 'ready' ? 'rgba(255,255,255,0.3)' : undefined, color: prewarmStatus.status === 'ready' ? '#fff' : undefined }}
+            >
+              {prewarmStatus.status === 'ready' ? '重新预热' : '预热业务线'}
+            </Button>
+          </Space>
+        </div>
       </div>
-      
-      <Card bordered={false} style={{ minHeight: 600 }}>
+
+      <Card style={{ minHeight: 600, borderRadius: 12, border: '1px solid #e8ecf1' }} styles={{ body: { padding: activeTab === null ? '28px' : '20px 24px' } }}>
         {(() => {
           const handleSelectModule = (key) => {
             setActiveTab(key)
@@ -1276,7 +1301,7 @@ const AdminDashboard = () => {
 
                       <Row gutter={16}>
                         <Col span={12}>
-                          <Card title="各维度平均得分" bordered={false}>
+                          <Card title="各维度平均得分" variant="borderless">
                             <div style={{ width: '100%', height: 300 }}>
                               <ResponsiveContainer width="100%" height="100%">
                                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={[
@@ -1296,7 +1321,7 @@ const AdminDashboard = () => {
                           </Card>
                         </Col>
                         <Col span={12}>
-                          <Card title="Top 10 易错点" bordered={false}>
+                          <Card title="Top 10 易错点" variant="borderless">
                             <div style={{ width: '100%', height: 300 }}>
                               <ResponsiveContainer width="100%" height="100%">
                                 <BarChart 
@@ -1316,7 +1341,7 @@ const AdminDashboard = () => {
                         </Col>
                       </Row>
 
-                      <Card title="题库分类统计" bordered={false} style={{ marginTop: 16 }}>
+                      <Card title="题库分类统计" variant="borderless" style={{ marginTop: 16 }}>
                         <Row gutter={16}>
                           {dashboardStats.category_stats.map(cat => (
                             <Col key={cat.category} span={6} style={{ marginBottom: 16 }}>
@@ -1456,22 +1481,47 @@ const AdminDashboard = () => {
           ]
 
           if (!activeTab) {
+            const groupColors = ['#1677ff', '#722ed1', '#13c2c2', '#fa8c16']
             return (
               <div>
-                {MODULE_GROUPS.map(group => (
-                  <div key={group.title} style={{ marginBottom: 32 }}>
-                    <Typography.Title level={5} style={{ marginBottom: 16, color: '#8c8c8c' }}>{group.title}</Typography.Title>
+                {MODULE_GROUPS.map((group, gi) => (
+                  <div key={group.title} style={{ marginBottom: 28 }}>
+                    <div style={{
+                      marginBottom: 14, paddingBottom: 8,
+                      borderBottom: `2px solid ${groupColors[gi]}20`,
+                      display: 'flex', alignItems: 'center', gap: 8,
+                    }}>
+                      <div style={{ width: 4, height: 16, borderRadius: 2, background: groupColors[gi] }} />
+                      <Typography.Title level={5} style={{ margin: 0, color: groupColors[gi] }}>{group.title}</Typography.Title>
+                    </div>
                     <Row gutter={[16, 16]}>
                       {group.modules.map(m => (
                         <Col xs={24} sm={12} md={8} lg={6} key={m.key}>
-                          <Card hoverable onClick={() => handleSelectModule(m.key)} style={{ height: '100%' }} bodyStyle={{ padding: 16 }}>
-                            <Space align="start">
-                              <div style={{ fontSize: 26, color: '#1677ff', lineHeight: 1 }}>{m.icon}</div>
-                              <div>
-                                <div style={{ fontWeight: 600, fontSize: 15 }}>{m.label}</div>
-                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{m.desc}</Typography.Text>
+                          <Card
+                            hoverable
+                            onClick={() => handleSelectModule(m.key)}
+                            style={{
+                              height: '100%', borderRadius: 10,
+                              border: '1px solid #e8ecf1',
+                              transition: 'all 0.25s',
+                            }}
+                            styles={{ body: { padding: '16px 18px' } }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                              <div style={{
+                                width: 42, height: 42, borderRadius: 10,
+                                background: `${groupColors[gi]}12`,
+                                color: groupColors[gi],
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 20, flexShrink: 0,
+                              }}>
+                                {m.icon}
                               </div>
-                            </Space>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4, lineHeight: 1.4 }}>{m.label}</div>
+                                <Typography.Text type="secondary" style={{ fontSize: 12, lineHeight: 1.5, display: 'block' }}>{m.desc}</Typography.Text>
+                              </div>
+                            </div>
                           </Card>
                         </Col>
                       ))}
@@ -1485,7 +1535,11 @@ const AdminDashboard = () => {
           const current = moduleItems.find(i => i.key === activeTab)
           return (
             <div>
-              <Button icon={<ArrowLeftOutlined />} onClick={() => setActiveTab(null)} style={{ marginBottom: 16 }}>
+              <Button
+                icon={<ArrowLeftOutlined />}
+                onClick={() => setActiveTab(null)}
+                style={{ marginBottom: 16, borderRadius: 8 }}
+              >
                 返回配置大厅
               </Button>
               <Typography.Title level={4} style={{ marginBottom: 16 }}>{current?.label}</Typography.Title>
@@ -1502,7 +1556,7 @@ const AdminDashboard = () => {
         onOk={() => personaForm.submit()}
         onCancel={() => setIsPersonaModalVisible(false)}
         width={700}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={personaForm} layout="vertical" onFinish={handleSavePersona}>
           <Form.Item name="name" label="角色名称" rules={[{ required: true }]}>
@@ -1598,7 +1652,7 @@ const AdminDashboard = () => {
         onOk={() => questionForm.submit()}
         onCancel={() => setIsQuestionModalVisible(false)}
         width={700}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={questionForm} layout="vertical" onFinish={handleSaveQuestion} initialValues={{ category: '通用业务', difficulty: 'medium' }}>
           <Form.Item name="source_node_id" label="关联知识库节点" tooltip="选择关联的知识库节点后，题目分类将自动从节点业务线继承">
@@ -1639,7 +1693,7 @@ const AdminDashboard = () => {
         onOk={() => paperForm.submit()}
         onCancel={() => setIsPaperModalVisible(false)}
         width={800}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={paperForm} layout="vertical" onFinish={handleCreatePaper}>
           <Form.Item name="title" label="试卷标题" rules={[{ required: true }]}>
@@ -1687,7 +1741,7 @@ const AdminDashboard = () => {
         title="试卷下发记录"
         open={assignmentDrawerVisible}
         onClose={() => setAssignmentDrawerVisible(false)}
-        width={600}
+        size={600}
       >
         <Table
           dataSource={paperAssignments}

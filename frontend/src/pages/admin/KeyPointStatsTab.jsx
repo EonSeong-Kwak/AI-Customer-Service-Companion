@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Typography, Table, Button, Space, Modal, Form, Input, message, Tag, Statistic, Divider } from 'antd'
+import { Typography, Table, Button, Space, Modal, Form, Input, App, Tag, Statistic, Divider } from 'antd'
 import { ThunderboltOutlined } from '@ant-design/icons'
 import axios from 'axios'
 import { API_BASE } from './constants'
@@ -8,6 +8,7 @@ const { TextArea } = Input
 
 // ===== V5.0: 自适应知识进化引擎 · 阶段一 —— 踩分点命中率统计子组件 =====
 const KeyPointStatsTab = () => {
+  const { message } = App.useApp()
   const [data, setData] = useState({ total_key_points: 0, reliable_count: 0, weakest_points: [], insufficient_sample_points: [] })
   const [loading, setLoading] = useState(false)
   const [scanning, setScanning] = useState(false)

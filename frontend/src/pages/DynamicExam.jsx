@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  Typography, Card, Button, Input, Space, message, Modal, Progress, Tag, Tooltip,
-  Row, Col, Statistic, Table, Empty, Spin, Alert, Divider, List, Descriptions, Popconfirm, Select
+  Typography, Card, Button, Input, Space, App, Modal, Progress, Tag, Tooltip,
+  Row, Col, Statistic, Table, Empty, Spin, Alert, Divider, List, Descriptions, Popconfirm, Select, Avatar
 } from 'antd'
 import {
   SendOutlined, RobotOutlined, CheckCircleOutlined, CloseCircleOutlined,
   MinusCircleOutlined, ArrowUpOutlined, ArrowDownOutlined, FireOutlined,
   ThunderboltOutlined, AimOutlined, TrophyOutlined, WarningOutlined,
   AlertOutlined, SwapOutlined, ReloadOutlined, HistoryOutlined, FieldTimeOutlined,
-  DeleteOutlined
+  DeleteOutlined, UserOutlined, SmileOutlined, CustomerServiceOutlined, BulbOutlined, RocketOutlined
 } from '@ant-design/icons'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
@@ -55,6 +55,7 @@ const personaDifficultyMap = {
 }
 
 const DynamicExam = () => {
+  const { message } = App.useApp()
   // ===== 考试主状态 =====
   const [examId, setExamId] = useState(null)
   const [examStatus, setExamStatus] = useState('idle') // idle | in_progress | completed | hangup
@@ -469,151 +470,271 @@ const DynamicExam = () => {
   // ===== 阈值差值计算 =====
   const thresholdDiff = anxietyThreshold - currentAnxiety
 
-  // ===== 渲染顶部状态栏 =====
+  // ===== 渲染右侧状态面板 =====
   const renderStatusBar = () => {
     const personaInfo = personaDifficultyMap[personaType] || { color: 'default', difficulty: '-' }
     const anxietyColor = getAnxietyColor(currentAnxiety)
     const completedGoals = goals.filter(g => g.completed).length
 
     return (
-      <Card
-        size="small"
-        style={{ flexShrink: 0, marginBottom: 0, borderRadius: '8px 8px 0 0', border: '1px solid #e8e8e8' }}
-        styles={{ body: { padding: '12px 16px' } }}
-      >
-        {/* 第一行：轮次 + 烦躁值 + 情绪 + 阈值 */}
-        <Row gutter={[12, 8]} align="middle">
-          <Col flex="180px">
+      <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* 轮次进度卡片 */}
+        <Card
+          size="small"
+          style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+          styles={{ body: { padding: '14px 16px' } }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <FieldTimeOutlined style={{ color: '#1d39c4' }} />
-              <Text strong>轮次进度</Text>
+              <div style={{
+                width: 32, height: 32, borderRadius: 8,
+                background: 'linear-gradient(135deg, #1677ff 0%, #4096ff 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <FieldTimeOutlined style={{ color: '#fff', fontSize: 16 }} />
+              </div>
+              <Text strong style={{ fontSize: 14 }}>轮次进度</Text>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#1d39c4', marginTop: 2 }}>
-              第 {currentRound} 轮 / 共 {maxRounds} 轮
+            <Tag color="blue" style={{ margin: 0, borderRadius: 6, fontSize: 12 }}>
+              预期 {expectedRounds} 轮
+            </Tag>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 8 }}>
+              <span style={{ fontSize: 28, fontWeight: 800, color: '#1677ff', lineHeight: 1 }}>{currentRound}</span>
+              <span style={{ fontSize: 14, color: '#8c8c8c' }}>/ {maxRounds} 轮</span>
             </div>
-            <Text type="secondary" style={{ fontSize: 12 }}>预期 {expectedRounds} 轮完成</Text>
-          </Col>
+            <Progress
+              percent={Math.round((currentRound / maxRounds) * 100)}
+              strokeColor={{
+                '0%': '#1677ff',
+                '100%': '#4096ff',
+              }}
+              railColor="#f0f5ff"
+              size={8}
+              showInfo={false}
+              style={{ marginBottom: 0 }}
+            />
+          </div>
+        </Card>
 
-          <Col flex="auto">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <FireOutlined style={{ color: anxietyColor }} />
-              <Text strong>客户烦躁值</Text>
-              <span style={{ fontSize: 20, fontWeight: 800, color: anxietyColor }}>{currentAnxiety}</span>
-              <span style={{ color: '#8c8c8c', fontSize: 13 }}>/ 100</span>
-              {/* 烦躁值趋势 */}
+        {/* 客户烦躁值卡片 */}
+        <Card
+          size="small"
+          style={{
+            borderRadius: 12,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            borderLeft: `3px solid ${anxietyColor}`,
+          }}
+          styles={{ body: { padding: '14px 16px' } }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <FireOutlined style={{ color: anxietyColor, fontSize: 18 }} />
+              <Text strong style={{ fontSize: 14 }}>客户烦躁值</Text>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 24, fontWeight: 800, color: anxietyColor, lineHeight: 1 }}>{currentAnxiety}</span>
+              <span style={{ fontSize: 12, color: '#8c8c8c' }}>/100</span>
               {lastAnxietyChange !== 0 && (
                 <Tag
                   color={lastAnxietyChange > 0 ? 'error' : 'success'}
                   icon={lastAnxietyChange > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-                  style={{ marginLeft: 8 }}
+                  style={{ margin: 0, borderRadius: 6, fontSize: 11 }}
                 >
                   {lastAnxietyChange > 0 ? `+${lastAnxietyChange}` : lastAnxietyChange}
                 </Tag>
               )}
             </div>
-            {/* 烦躁值进度条：颜色随数值变化 */}
-            <Progress
-              percent={currentAnxiety}
-              strokeColor={anxietyColor}
-              trailColor="#f0f0f0"
-              strokeWidth={14}
-              format={() => ''}
-              showInfo={false}
-            />
-          </Col>
-
-          <Col flex="220px">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <AlertOutlined style={{ color: getEmotionTagColor(emotionState) === 'success' ? '#52c41a' : '#fa541c' }} />
-              <Text strong>情绪状态</Text>
+          </div>
+          <Progress
+            percent={currentAnxiety}
+            strokeColor={{
+              '0%': '#52c41a',
+              '50%': '#faad14',
+              '80%': '#f5222d',
+              '100%': '#820014',
+            }}
+            railColor="#f5f5f5"
+            size={10}
+            showInfo={false}
+            style={{ marginBottom: 8 }}
+          />
+          <Tooltip title="烦躁值达到阈值时会触发情绪安抚环节">
+            <div style={{
+              fontSize: 12,
+              padding: '6px 10px',
+              borderRadius: 6,
+              background: thresholdDiff > 0 ? '#f6ffed' : '#fff2f0',
+              color: thresholdDiff > 0 ? '#52c41a' : '#f5222d',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}>
+              <WarningOutlined />
+              {thresholdDiff > 0
+                ? `距触发安抚还差 ${thresholdDiff} 点（阈值 ${anxietyThreshold}）`
+                : thresholdDiff === 0
+                  ? '已达阈值，需立即安抚！'
+                  : `已超阈值 ${Math.abs(thresholdDiff)} 点！`}
             </div>
-            <div style={{ marginTop: 4 }}>
-              <Tag color={getEmotionTagColor(emotionState)} style={{ fontSize: 14, padding: '2px 10px' }}>
+          </Tooltip>
+        </Card>
+
+        {/* 客户信息卡片 */}
+        <Card
+          size="small"
+          style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+          styles={{ body: { padding: '14px 16px' } }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: 'linear-gradient(135deg, #722ed1 0%, #9254de 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <RobotOutlined style={{ color: '#fff', fontSize: 16 }} />
+            </div>
+            <Text strong style={{ fontSize: 14 }}>客户信息</Text>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>情绪状态</Text>
+              <Tag
+                color={getEmotionTagColor(emotionState)}
+                style={{ margin: 0, borderRadius: 6, padding: '2px 10px', fontSize: 12 }}
+              >
                 {emotionState || '未知'}
               </Tag>
             </div>
-            {/* 阈值提示 */}
-            <Tooltip title="烦躁值达到阈值时会触发情绪安抚环节">
-              <div style={{ fontSize: 12, color: thresholdDiff > 0 ? '#8c8c8c' : '#f5222d', marginTop: 4 }}>
-                阈值 {anxietyThreshold} ·{' '}
-                {thresholdDiff > 0
-                  ? `距触发安抚还差 ${thresholdDiff} 点`
-                  : thresholdDiff === 0
-                    ? '已达阈值，需立即安抚'
-                    : `已超阈值 ${Math.abs(thresholdDiff)} 点`}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>客户人格</Text>
+              <Space size={4}>
+                <Tag color={personaInfo.color} style={{ margin: 0, borderRadius: 6, fontSize: 12 }}>{personaType || '-'}</Tag>
+                <Tag style={{ margin: 0, borderRadius: 6, fontSize: 11 }}>{personaInfo.difficulty}</Tag>
+              </Space>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>初始烦躁值</Text>
+              <Text strong style={{ color: '#fa8c16', fontSize: 14 }}>{initialAnxiety}</Text>
+            </div>
+          </div>
+        </Card>
+
+        {/* 当前业务线卡片 */}
+        <Card
+          size="small"
+          style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+          styles={{ body: { padding: '14px 16px' } }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: 'linear-gradient(135deg, #13c2c2 0%, #36cfc9 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <AimOutlined style={{ color: '#fff', fontSize: 16 }} />
+            </div>
+            <Text strong style={{ fontSize: 14 }}>当前业务线</Text>
+          </div>
+          <div style={{
+            fontSize: 16,
+            fontWeight: 700,
+            color: '#13c2c2',
+            marginBottom: 8,
+            padding: '8px 12px',
+            background: '#e6fffb',
+            borderRadius: 8,
+            textAlign: 'center',
+          }}>
+            {currentBusinessLine || '-'}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
+            <Text type="secondary">已覆盖业务线</Text>
+            <Tag color="cyan" style={{ margin: 0, borderRadius: 6 }}>{businessLinesCovered.length} 条</Tag>
+          </div>
+        </Card>
+
+        {/* 业务目标卡片 */}
+        <Card
+          size="small"
+          style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+          styles={{ body: { padding: '14px 16px' } }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 8,
+                background: completedGoals === goals.length
+                  ? 'linear-gradient(135deg, #52c41a 0%, #73d13d 100%)'
+                  : 'linear-gradient(135deg, #faad14 0%, #ffc53d 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <CheckCircleOutlined style={{ color: '#fff', fontSize: 16 }} />
               </div>
-            </Tooltip>
-          </Col>
-        </Row>
-
-        <Divider style={{ margin: '10px 0' }} />
-
-        {/* 第二行：人格 + 业务线 + 目标进度 */}
-        <Row gutter={[12, 8]} align="middle">
-          <Col flex="220px">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <RobotOutlined style={{ color: '#722ed1' }} />
-              <Text strong>客户人格</Text>
-              <Tag color={personaInfo.color}>{personaType}</Tag>
-              <Tag>{personaInfo.difficulty}</Tag>
+              <Text strong style={{ fontSize: 14 }}>业务目标</Text>
             </div>
-            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
-              初始烦躁值：<Text strong style={{ color: '#fa541c' }}>{initialAnxiety}</Text>
-              <span style={{ margin: '0 8px' }}>·</span>
-              阈值：<Text strong style={{ color: '#fa541c' }}>{anxietyThreshold}</Text>
-            </div>
-          </Col>
-
-          <Col flex="180px">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <AimOutlined style={{ color: '#13c2c2' }} />
-              <Text strong>当前业务线</Text>
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#13c2c2', marginTop: 2 }}>
-              {currentBusinessLine || '-'}
-            </div>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              已覆盖 {businessLinesCovered.length} 条业务线
-            </Text>
-          </Col>
-
-          <Col flex="auto">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <CheckCircleOutlined style={{ color: completedGoals === goals.length ? '#52c41a' : '#faad14' }} />
-              <Text strong>业务目标进度</Text>
-              <Tag color={completedGoals === goals.length ? 'success' : 'processing'}>
-                {completedGoals} / {goals.length}
-              </Tag>
-            </div>
-            {/* 目标列表 */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {goals.length === 0 && <Text type="secondary" style={{ fontSize: 12 }}>暂无目标</Text>}
-              {goals.map((g, idx) => {
-                const icon = g.completed
-                  ? <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                  : g.started
-                    ? <CloseCircleOutlined style={{ color: '#faad14' }} />
-                    : <MinusCircleOutlined style={{ color: '#bfbfbf' }} />
-                return (
-                  <Tag
-                    key={g.id || idx}
-                    color={g.completed ? 'success' : 'default'}
-                    icon={icon}
-                    style={{ fontSize: 12 }}
-                  >
+            <Tag
+              color={completedGoals === goals.length ? 'success' : 'processing'}
+              style={{ margin: 0, borderRadius: 6, fontSize: 12 }}
+            >
+              {completedGoals} / {goals.length}
+            </Tag>
+          </div>
+          <Progress
+            percent={goals.length > 0 ? Math.round((completedGoals / goals.length) * 100) : 0}
+            strokeColor={{
+              '0%': '#faad14',
+              '100%': '#52c41a',
+            }}
+            railColor="#fffbe6"
+            size={8}
+            showInfo={false}
+            style={{ marginBottom: 12 }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {goals.length === 0 && <Text type="secondary" style={{ fontSize: 12, textAlign: 'center' }}>暂无目标</Text>}
+            {goals.map((g, idx) => {
+              const icon = g.completed
+                ? <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                : g.started
+                  ? <CloseCircleOutlined style={{ color: '#faad14' }} />
+                  : <MinusCircleOutlined style={{ color: '#bfbfbf' }} />
+              return (
+                <div
+                  key={g.id || idx}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 10px',
+                    borderRadius: 6,
+                    background: g.completed ? '#f6ffed' : g.started ? '#fffbe6' : '#fafafa',
+                    fontSize: 12,
+                  }}
+                >
+                  {icon}
+                  <span style={{
+                    flex: 1,
+                    color: g.completed ? '#52c41a' : g.started ? '#faad14' : '#595959',
+                    textDecoration: g.completed ? 'line-through' : 'none',
+                    opacity: g.completed ? 0.8 : 1,
+                  }}>
                     {g.name}
-                    {g.completed && g.completed_round ? `（第${g.completed_round}轮）` : ''}
-                  </Tag>
-                )
-              })}
-            </div>
-          </Col>
-        </Row>
+                  </span>
+                  {g.completed && g.completed_round && (
+                    <Tag color="success" style={{ margin: 0, fontSize: 10, borderRadius: 4 }}>第{g.completed_round}轮</Tag>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </Card>
 
         {/* V3.4: 意图状态机 + PBL 项目制追踪面板 */}
         {examMode === 'project' && taskState && renderProjectTracking()}
         {examMode === 'single' && intentState && renderIntentTracking()}
-      </Card>
+      </div>
     )
   }
 
@@ -844,82 +965,134 @@ const DynamicExam = () => {
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '20px 24px',
+          padding: '24px 0',
           background: '#f5f7fa',
-          borderLeft: '1px solid #e8e8e8',
-          borderRight: '1px solid #e8e8e8',
         }}
       >
-        {chatHistory.length === 0 ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            height: '100%', color: '#bfbfbf',
-          }}>
-            <RobotOutlined style={{ fontSize: 72, marginBottom: 16, opacity: 0.4 }} />
-            <div style={{ fontSize: 18, fontWeight: 500 }}>动态模拟考试系统</div>
-            <div style={{ marginTop: 8, fontSize: 13, textAlign: 'center' }}>
-              点击下方"开始考试"按钮，可选择客户人格，业务线仍由系统随机抽取
+        <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 24px' }}>
+          {chatHistory.length === 0 ? (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              height: '100%', minHeight: 300, color: '#bfbfbf',
+            }}>
+              <div style={{
+                width: 100, height: 100, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #e6f4ff 0%, #f0f7ff 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: 20,
+                boxShadow: '0 8px 24px rgba(22, 119, 255, 0.1)',
+              }}>
+                <RobotOutlined style={{ fontSize: 48, color: '#1677ff', opacity: 0.8 }} />
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 600, color: '#595959', marginBottom: 8 }}>准备好开始了吗？</div>
+              <div style={{ fontSize: 14, color: '#8c8c8c', textAlign: 'center', lineHeight: 1.6 }}>
+                客户即将发起对话，请做好接待准备<br />
+                考试过程中请注意观察客户情绪变化
+              </div>
             </div>
-          </div>
-        ) : (
-          chatHistory.map((chat, idx) => {
-            const isTrainee = chat.role === 'trainee'
-            return (
-              <div
-                key={idx}
-                style={{
-                  display: 'flex',
-                  flexDirection: isTrainee ? 'row-reverse' : 'row',
-                  marginBottom: 18,
-                  alignItems: 'flex-start',
-                }}
-              >
-                <div style={{
-                  width: 38, height: 38, borderRadius: '50%',
-                  background: isTrainee ? '#1d39c4' : '#fff',
-                  color: isTrainee ? '#fff' : '#722ed1',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 18, boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  marginLeft: isTrainee ? 12 : 0,
-                  marginRight: isTrainee ? 0 : 12,
-                  flexShrink: 0, border: isTrainee ? 'none' : '1px solid #e8e8e8',
-                }}>
-                  {isTrainee ? '我' : <RobotOutlined />}
-                </div>
-                <div style={{ maxWidth: '72%' }}>
-                  {!isTrainee && (
-                    <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 4, marginLeft: 4 }}>
-                      客户 · 第 {chat.round} 轮
+          ) : (
+            chatHistory.map((chat, idx) => {
+              const isTrainee = chat.role === 'trainee'
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    flexDirection: isTrainee ? 'row-reverse' : 'row',
+                    marginBottom: 20,
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <Avatar
+                    size={40}
+                    icon={isTrainee ? <UserOutlined /> : <RobotOutlined />}
+                    style={{
+                      background: isTrainee ? 'linear-gradient(135deg, #1677ff 0%, #4096ff 100%)' : '#fff',
+                      color: isTrainee ? '#fff' : '#722ed1',
+                      fontSize: 18,
+                      boxShadow: isTrainee
+                        ? '0 4px 12px rgba(22, 119, 255, 0.3)'
+                        : '0 2px 8px rgba(0,0,0,0.08)',
+                      marginLeft: isTrainee ? 12 : 0,
+                      marginRight: isTrainee ? 0 : 12,
+                      flexShrink: 0,
+                      border: isTrainee ? 'none' : '2px solid #f0f0f0',
+                    }}
+                  />
+                  <div style={{ maxWidth: 'calc(100% - 60px)' }}>
+                    {!isTrainee && (
+                      <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 6, marginLeft: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Tag color="purple" style={{ margin: 0, fontSize: 11, borderRadius: 4 }}>客户</Tag>
+                        <span>第 {chat.round} 轮</span>
+                        {personaType && (
+                          <Tag color={personaDifficultyMap[personaType]?.color} style={{ margin: 0, fontSize: 11 }}>
+                            {personaType}
+                          </Tag>
+                        )}
+                      </div>
+                    )}
+                    {isTrainee && (
+                      <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 6, marginRight: 4, textAlign: 'right', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+                        <span>第 {chat.round} 轮</span>
+                        <Tag color="blue" style={{ margin: 0, fontSize: 11, borderRadius: 4 }}>我</Tag>
+                      </div>
+                    )}
+                    <div style={{
+                      padding: '14px 18px',
+                      borderRadius: isTrainee ? '18px 4px 18px 18px' : '4px 18px 18px 18px',
+                      background: isTrainee
+                        ? 'linear-gradient(135deg, #1677ff 0%, #4096ff 100%)'
+                        : '#fff',
+                      color: isTrainee ? '#fff' : '#333',
+                      boxShadow: isTrainee
+                        ? '0 4px 12px rgba(22, 119, 255, 0.2)'
+                        : '0 2px 12px rgba(0,0,0,0.06)',
+                      lineHeight: 1.7,
+                      fontSize: 14,
+                      wordBreak: 'break-word',
+                      whiteSpace: 'pre-wrap',
+                      position: 'relative',
+                    }}>
+                      {chat.content}
                     </div>
-                  )}
-                  {isTrainee && (
-                    <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 4, marginRight: 4, textAlign: 'right' }}>
-                      我的回答 · 第 {chat.round} 轮
-                    </div>
-                  )}
-                  <div style={{
-                    padding: '12px 16px',
-                    borderRadius: isTrainee ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
-                    background: isTrainee ? '#1d39c4' : '#fff',
-                    color: isTrainee ? '#fff' : '#333',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                    lineHeight: 1.6, fontSize: 14, wordBreak: 'break-word',
-                    whiteSpace: 'pre-wrap',
-                    border: isTrainee ? 'none' : '1px solid #ececec',
-                  }}>
-                    {chat.content}
                   </div>
                 </div>
+              )
+            })
+          )}
+          {/* 发送中的等待提示 */}
+          {sending && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'row',
+              marginBottom: 20,
+              alignItems: 'flex-start',
+            }}>
+              <Avatar
+                size={40}
+                icon={<RobotOutlined />}
+                style={{
+                  background: '#fff',
+                  color: '#722ed1',
+                  fontSize: 18,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  marginRight: 12,
+                  flexShrink: 0,
+                  border: '2px solid #f0f0f0',
+                }}
+              />
+              <div style={{
+                padding: '14px 18px',
+                borderRadius: '4px 18px 18px 18px',
+                background: '#fff',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+              }}>
+                <Spin size="small" style={{ marginRight: 8 }} />
+                <Text type="secondary" style={{ fontSize: 13 }}>客户正在思考...</Text>
               </div>
-            )
-          })
-        )}
-        {/* 踩分点命中提示（若有） */}
-        {keyPointsHit.length > 0 && sending && (
-          <div style={{ textAlign: 'center', color: '#8c8c8c', fontSize: 12 }}>
-            <Spin size="small" /> 客户正在思考...
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
     )
   }
@@ -928,104 +1101,252 @@ const DynamicExam = () => {
   const renderInputArea = () => {
     const disabled = examStatus !== 'in_progress'
     return (
-      <Card
-        size="small"
-        style={{ flexShrink: 0, borderRadius: '0 0 8px 8px', border: '1px solid #e8e8e8', borderTop: 'none' }}
-        styles={{ body: { padding: '12px 16px' } }}
-      >
-        <TextArea
-          rows={3}
-          value={inputText}
-          onChange={e => setInputText(e.target.value)}
-          placeholder={disabled ? '考试未开始或已结束' : '请输入您的回复话术（Enter 发送，Shift+Enter 换行）...'}
-          disabled={disabled}
-          bordered={false}
-          style={{ resize: 'none', padding: '0 0 10px 0', fontSize: 14 }}
-          onPressEnter={e => {
-            if (!e.shiftKey) {
-              e.preventDefault()
-              if (!sending && !disabled) handleSend()
-            }
-          }}
-        />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f0f0f0', paddingTop: 10 }}>
-          <div style={{ color: '#bfbfbf', fontSize: 12 }}>
-            {triggeredRules.length > 0 && (
-              <Tooltip title={triggeredRules.join('；')}>
-                <span style={{ marginRight: 12 }}>
-                  <ThunderboltOutlined style={{ color: '#faad14', marginRight: 4 }} />
-                  上轮触发 {triggeredRules.length} 条规则
-                </span>
-              </Tooltip>
-            )}
-            <kbd style={{ background: '#f0f0f0', padding: '2px 6px', borderRadius: 4 }}>Enter</kbd> 发送
-          </div>
-          <Space>
-            <Button
-              danger
-              ghost
-              icon={<TrophyOutlined />}
-              loading={ending}
-              onClick={handleEndExam}
-              disabled={disabled || chatHistory.length === 0}
-              style={{ borderRadius: 20 }}
-            >
-              结束考试
-            </Button>
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              loading={sending}
-              onClick={handleSend}
+      <div style={{
+        flexShrink: 0,
+        background: '#fff',
+        borderTop: '1px solid #e8e8e8',
+        padding: '16px 24px 20px',
+      }}>
+        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+          <div style={{
+            background: '#f5f7fa',
+            borderRadius: 16,
+            border: '1px solid #e8e8e8',
+            padding: '12px 16px',
+            transition: 'all 0.2s',
+          }}>
+            <TextArea
+              rows={3}
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              placeholder={disabled ? '考试未开始或已结束' : '请输入您的回复话术（Enter 发送，Shift+Enter 换行）...'}
               disabled={disabled}
-              style={{ borderRadius: 20, padding: '0 28px' }}
-            >
-              发送回答
-            </Button>
-          </Space>
+              variant="borderless"
+              style={{
+                resize: 'none',
+                padding: 0,
+                fontSize: 14,
+                background: 'transparent',
+                lineHeight: 1.6,
+              }}
+              onPressEnter={e => {
+                if (!e.shiftKey) {
+                  e.preventDefault()
+                  if (!sending && !disabled) handleSend()
+                }
+              }}
+            />
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingTop: 12,
+              marginTop: 8,
+              borderTop: '1px solid #e8e8e8',
+            }}>
+              <div style={{ color: '#8c8c8c', fontSize: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                {triggeredRules.length > 0 && (
+                  <Tooltip title={triggeredRules.join('；')}>
+                    <Tag color="gold" style={{ margin: 0, borderRadius: 6, cursor: 'default' }}>
+                      <ThunderboltOutlined style={{ marginRight: 4 }} />
+                      触发 {triggeredRules.length} 条规则
+                    </Tag>
+                  </Tooltip>
+                )}
+                <span>
+                  <kbd style={{
+                    background: '#fff',
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    border: '1px solid #d9d9d9',
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  }}>Enter</kbd> 发送
+                  <span style={{ margin: '0 6px' }}>·</span>
+                  <kbd style={{
+                    background: '#fff',
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    border: '1px solid #d9d9d9',
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  }}>Shift+Enter</kbd> 换行
+                </span>
+              </div>
+              <Space size={10}>
+                <Button
+                  icon={<TrophyOutlined />}
+                  loading={ending}
+                  onClick={handleEndExam}
+                  disabled={disabled || chatHistory.length === 0}
+                  style={{
+                    borderRadius: 10,
+                    height: 40,
+                    padding: '0 20px',
+                    fontWeight: 500,
+                  }}
+                >
+                  结束考试
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<SendOutlined />}
+                  loading={sending}
+                  onClick={handleSend}
+                  disabled={disabled}
+                  style={{
+                    borderRadius: 10,
+                    height: 40,
+                    padding: '0 28px',
+                    fontWeight: 600,
+                    boxShadow: '0 4px 12px rgba(22, 119, 255, 0.3)',
+                  }}
+                >
+                  发送回答
+                </Button>
+              </Space>
+            </div>
+          </div>
         </div>
-      </Card>
+      </div>
     )
   }
 
-  // ===== 渲染初始状态的"开始考试"按钮 =====
+  // ===== 渲染初始状态的"开始考试"界面 =====
   const renderIdleMask = () => {
     if (examStatus !== 'idle' || chatHistory.length > 0) return null
     return (
       <div style={{
-        position: 'absolute', inset: 0, background: 'rgba(245,247,250,0.6)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5,
+        position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5, padding: 24, overflow: 'auto',
       }}>
-        <Card style={{ width: 460, textAlign: 'center', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
-          <RobotOutlined style={{ fontSize: 56, color: '#1d39c4', marginBottom: 12 }} />
-          <Title level={4} style={{ marginBottom: 8 }}>动态模拟考试</Title>
-          <Paragraph type="secondary" style={{ fontSize: 13, marginBottom: 20 }}>
-            系统将随机抽取业务线、烦躁值阈值与业务目标，<br />
-            全程 10-15 轮对话，综合考察业务能力、情绪管理与应变能力。
-          </Paragraph>
-          <Select
-            allowClear
-            placeholder="客户人格：不选则随机抽取"
-            style={{ width: 280, marginBottom: 16, textAlign: 'left' }}
-            value={selectedPersonaId}
-            onChange={setSelectedPersonaId}
-            options={personaOptions.map(p => ({
-              value: p.id,
-              label: p.description ? `${p.name}（${p.description}）` : p.name,
-            }))}
-          />
-          <br />
-          <Button
-            type="primary"
-            size="large"
-            icon={<ThunderboltOutlined />}
-            loading={starting}
-            onClick={handleStartExam}
-            style={{ borderRadius: 24, padding: '0 36px', height: 44 }}
+        <div style={{ width: '100%', maxWidth: 760 }}>
+          {/* 顶部横幅区域 */}
+          <Card
+            style={{
+              borderRadius: '16px 16px 0 0',
+              background: 'linear-gradient(135deg, #1677ff 0%, #4096ff 100%)',
+              border: 'none',
+              boxShadow: '0 4px 20px rgba(22, 119, 255, 0.25)',
+            }}
+            styles={{ body: { padding: '32px 36px' } }}
           >
-            开始考试
-          </Button>
-        </Card>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              <Avatar
+                size={72}
+                icon={<CustomerServiceOutlined />}
+                style={{ background: 'rgba(255,255,255,0.2)', fontSize: 36, flexShrink: 0 }}
+              />
+              <div style={{ flex: 1 }}>
+                <Title level={2} style={{ color: '#fff', margin: 0, marginBottom: 8 }}>
+                  <ThunderboltOutlined /> 智能客服动态模拟考试
+                </Title>
+                <Paragraph style={{ color: 'rgba(255,255,255,0.9)', margin: 0, fontSize: 15 }}>
+                  系统将随机抽取业务场景、客户人格与烦躁值阈值，全程 10-15 轮对话，
+                  综合考察业务能力、情绪管理与临场应变能力。
+                </Paragraph>
+              </div>
+            </div>
+          </Card>
+
+          {/* 下方配置区 */}
+          <Card
+            style={{
+              borderRadius: '0 0 16px 16px',
+              border: 'none',
+              borderTop: 'none',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+            }}
+            styles={{ body: { padding: '28px 36px 32px' } }}
+          >
+            {/* 考试特点说明 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: 28 }}>
+              <Col span={8}>
+                <Card size="small" style={{ textAlign: 'center', borderRadius: 12, background: '#f0f7ff', border: '1px solid #bae0ff' }}>
+                  <SmileOutlined style={{ fontSize: 28, color: '#1677ff', marginBottom: 8 }} />
+                  <div style={{ fontWeight: 600, color: '#1677ff', marginBottom: 4 }}>动态人格</div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>多种客户性格随机匹配</Text>
+                </Card>
+              </Col>
+              <Col span={8}>
+                <Card size="small" style={{ textAlign: 'center', borderRadius: 12, background: '#fff7e6', border: '1px solid #ffd591' }}>
+                  <FireOutlined style={{ fontSize: 28, color: '#fa8c16', marginBottom: 8 }} />
+                  <div style={{ fontWeight: 600, color: '#fa8c16', marginBottom: 4 }}>情绪变化</div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>实时监测客户烦躁值波动</Text>
+                </Card>
+              </Col>
+              <Col span={8}>
+                <Card size="small" style={{ textAlign: 'center', borderRadius: 12, background: '#f6ffed', border: '1px solid #b7eb8f' }}>
+                  <AimOutlined style={{ fontSize: 28, color: '#52c41a', marginBottom: 8 }} />
+                  <div style={{ fontWeight: 600, color: '#52c41a', marginBottom: 4 }}>多线业务</div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>业务线自动切换综合考察</Text>
+                </Card>
+              </Col>
+            </Row>
+
+            <Divider style={{ margin: '0 0 24px' }} />
+
+            {/* 配置表单 */}
+            <div style={{ maxWidth: 480, margin: '0 auto' }}>
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <RobotOutlined style={{ color: '#722ed1', fontSize: 16 }} />
+                  <Text strong style={{ fontSize: 15 }}>选择客户人格</Text>
+                  <Tag color="default" style={{ marginLeft: 'auto' }}>可选</Tag>
+                </div>
+                <Select
+                  allowClear
+                  placeholder="不选择则由系统随机匹配客户人格"
+                  style={{ width: '100%' }}
+                  value={selectedPersonaId}
+                  onChange={setSelectedPersonaId}
+                  size="large"
+                  options={personaOptions.map(p => ({
+                    value: p.id,
+                    label: (
+                      <div style={{ padding: '2px 0' }}>
+                        <Space>
+                          <Tag color={personaDifficultyMap[p.name]?.color || 'default'}>
+                            {personaDifficultyMap[p.name]?.difficulty || ''}
+                          </Tag>
+                          <span style={{ fontWeight: 500 }}>{p.name}</span>
+                          {p.description && <Text type="secondary" style={{ fontSize: 12 }}>（{p.description}）</Text>}
+                        </Space>
+                      </div>
+                    ),
+                  }))}
+                />
+              </div>
+
+              {/* 开始按钮 */}
+              <Button
+                type="primary"
+                size="large"
+                icon={<RocketOutlined />}
+                loading={starting}
+                onClick={handleStartExam}
+                block
+                style={{
+                  borderRadius: 12,
+                  height: 52,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  boxShadow: '0 4px 12px rgba(22, 119, 255, 0.3)',
+                }}
+              >
+                {starting ? '正在初始化考试...' : '开始模拟考试'}
+              </Button>
+
+              <div style={{ textAlign: 'center', marginTop: 16 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  <BulbOutlined /> 提示：开始后请认真接待客户，注意控制客户情绪
+                </Text>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
     )
   }
@@ -1041,7 +1362,7 @@ const DynamicExam = () => {
         okText="开始应对"
         cancelText="关闭"
         centered
-        maskClosable={false}
+        mask={{ closable: false }}
         width={560}
       >
         {emergencyData && (
@@ -1100,7 +1421,7 @@ const DynamicExam = () => {
         okText="开始安抚"
         cancelText="关闭"
         centered
-        maskClosable={false}
+        mask={{ closable: false }}
         width={560}
       >
         {anxietyWarningData && (
@@ -1117,7 +1438,7 @@ const DynamicExam = () => {
                 <Progress
                   percent={currentAnxiety}
                   strokeColor={getAnxietyColor(currentAnxiety)}
-                  strokeWidth={12}
+                  size={12}
                   format={p => `${p} / 100`}
                 />
               </div>
@@ -1169,7 +1490,7 @@ const DynamicExam = () => {
         okText="开始新业务线"
         cancelText="关闭"
         centered
-        maskClosable={false}
+        mask={{ closable: false }}
         width={560}
       >
         {switchData && (
@@ -1271,128 +1592,257 @@ const DynamicExam = () => {
 
     return (
       <Modal
-        title={<Space><TrophyOutlined style={{ color: '#faad14' }} /> 📊 考试结果报告</Space>}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: 'linear-gradient(135deg, #faad14 0%, #ffc53d 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <TrophyOutlined style={{ color: '#fff', fontSize: 20 }} />
+            </div>
+            <span style={{ fontSize: 18, fontWeight: 600 }}>考试结果报告</span>
+          </div>
+        }
         open={activeModal === 'result'}
         onOk={handleReset}
         onCancel={() => setActiveModal(null)}
         okText="重新考试"
         cancelText="关闭查看"
         centered
-        maskClosable={false}
-        width={820}
+        mask={{ closable: false }}
+        width={880}
         footer={[
-          <Button key="history" icon={<HistoryOutlined />} onClick={() => { setActiveModal(null); loadHistory() }}>
+          <Button key="history" icon={<HistoryOutlined />} onClick={() => { setActiveModal(null); loadHistory() }} style={{ borderRadius: 8 }}>
             查看历史记录
           </Button>,
-          <Button key="close" onClick={() => setActiveModal(null)}>关闭</Button>,
-          <Button key="reset" type="primary" icon={<ReloadOutlined />} onClick={handleReset}>
+          <Button key="close" onClick={() => setActiveModal(null)} style={{ borderRadius: 8 }}>关闭</Button>,
+          <Button key="reset" type="primary" icon={<ReloadOutlined />} onClick={handleReset} style={{ borderRadius: 8, fontWeight: 500 }}>
             重新考试
           </Button>,
         ]}
       >
-        <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: 8 }}>
-          {/* 综合得分 + 三维度 */}
-          <Row gutter={16} align="middle" style={{ marginBottom: 16 }}>
-            <Col span={8} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>🏆 综合得分</div>
-              <div style={{ fontSize: 56, fontWeight: 800, color: overallColor, lineHeight: 1 }}>
-                {score.overall_score}
-              </div>
-              <div style={{ color: '#8c8c8c', fontSize: 12 }}>分</div>
-              <Tag color={finalReport.status === 'hangup' ? 'error' : 'success'} style={{ marginTop: 8 }}>
-                {finalReport.status === 'hangup' ? '客户挂断' : '正常结束'}
-              </Tag>
-              <br />
-              <Tag color={score.compliance_passed === false ? 'error' : 'default'} style={{ marginTop: 6 }}>
-                {score.compliance_passed === false ? `合规性：违规（${score.compliance_reason || ''}）` : '合规性：通过'}
-              </Tag>
+        <div style={{ maxHeight: '72vh', overflowY: 'auto', padding: '4px 4px 4px 0' }}>
+          {/* 综合得分横幅 */}
+          <Card
+            style={{
+              marginBottom: 16,
+              borderRadius: 12,
+              background: score.overall_score >= 80
+                ? 'linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%)'
+                : score.overall_score >= 60
+                  ? 'linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%)'
+                  : 'linear-gradient(135deg, #fff2f0 0%, #ffccc7 100%)',
+              border: 'none',
+            }}
+            styles={{ body: { padding: '24px 28px' } }}
+          >
+            <Row gutter={24} align="middle">
+              <Col flex="200px" style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: 120, height: 120, borderRadius: '50%',
+                  background: '#fff',
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ fontSize: 48, fontWeight: 800, color: overallColor, lineHeight: 1 }}>
+                    {score.overall_score}
+                  </div>
+                  <div style={{ color: '#8c8c8c', fontSize: 14, marginTop: 4 }}>综合得分</div>
+                </div>
+              </Col>
+              <Col flex="auto">
+                <div style={{ marginBottom: 12 }}>
+                  <Title level={4} style={{ margin: 0, marginBottom: 8, color: overallColor }}>
+                    {score.overall_score >= 90 ? '🏆 非常优秀！' : score.overall_score >= 80 ? '🎉 表现良好！' : score.overall_score >= 60 ? '💪 继续加油！' : '⚠️ 需要提升'}
+                  </Title>
+                  <Space size={8} wrap>
+                    <Tag color={finalReport.status === 'hangup' ? 'error' : 'success'} style={{ borderRadius: 6, fontSize: 12, padding: '4px 10px' }}>
+                      {finalReport.status === 'hangup' ? '客户挂断' : '正常结束'}
+                    </Tag>
+                    <Tag color={score.compliance_passed === false ? 'error' : 'success'} style={{ borderRadius: 6, fontSize: 12, padding: '4px 10px' }}>
+                      {score.compliance_passed === false ? `合规性：违规` : '合规性：通过'}
+                    </Tag>
+                    {personaType && <Tag color={personaDifficultyMap[personaType]?.color} style={{ borderRadius: 6, fontSize: 12, padding: '4px 10px' }}>{personaType}客户</Tag>}
+                  </Space>
+                </div>
+                <Row gutter={16}>
+                  <Col span={8}>
+                    <Statistic
+                      title={<span style={{ fontSize: 12 }}>对话轮数</span>}
+                      value={details.actual_rounds || 0}
+                      suffix={`/ ${details.expected_rounds || maxRounds} 轮`}
+                      valueStyle={{ fontSize: 20, fontWeight: 700 }}
+                    />
+                  </Col>
+                  <Col span={8}>
+                    <Statistic
+                      title={<span style={{ fontSize: 12 }}>业务线覆盖</span>}
+                      value={businessLinesCovered.length}
+                      suffix="条"
+                      valueStyle={{ fontSize: 20, fontWeight: 700, color: '#13c2c2' }}
+                    />
+                  </Col>
+                  <Col span={8}>
+                    <Statistic
+                      title={<span style={{ fontSize: 12 }}>目标完成</span>}
+                      value={totalDone}
+                      suffix={`/ ${totalGoals}`}
+                      valueStyle={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}
+                    />
+                  </Col>
+                </Row>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* 维度评分卡片 */}
+          <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+            <Col span={6}>
+              <Card size="small" style={{ borderRadius: 10, textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+                styles={{ body: { padding: '16px 12px' } }}>
+                <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 8 }}>专业知识 <Text type="secondary">(40%)</Text></div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: dimensionColor(score.business_score) }}>{score.business_score}</div>
+                <Progress
+                  percent={score.business_score}
+                  strokeColor={dimensionColor(score.business_score)}
+                  showInfo={false}
+                  size="small"
+                  style={{ marginTop: 8 }}
+                />
+              </Card>
             </Col>
-            <Col span={16}>
-              {/* V5.0 五维度评分体系：专业知识40% + 服务态度25% + 沟通效率15% + 问题解决20%，权重固定，与考试模式无关 */}
-              <Row gutter={[8, 8]}>
-                <Col span={6}>
-                  <Card size="small" style={{ textAlign: 'center', borderTop: `3px solid ${dimensionColor(score.business_score)}` }}>
-                    <Statistic
-                      title="专业知识分 (40%)"
-                      value={score.business_score}
-                      valueStyle={{ color: dimensionColor(score.business_score), fontWeight: 700, fontSize: 20 }}
-                    />
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card size="small" style={{ textAlign: 'center', borderTop: `3px solid ${dimensionColor(score.emotion_score)}` }}>
-                    <Statistic
-                      title="服务态度分 (25%)"
-                      value={score.emotion_score}
-                      valueStyle={{ color: dimensionColor(score.emotion_score), fontWeight: 700, fontSize: 20 }}
-                    />
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card size="small" style={{ textAlign: 'center', borderTop: `3px solid ${dimensionColor(score.efficiency_score)}` }}>
-                    <Statistic
-                      title="沟通效率分 (15%)"
-                      value={score.efficiency_score}
-                      valueStyle={{ color: dimensionColor(score.efficiency_score), fontWeight: 700, fontSize: 20 }}
-                    />
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card size="small" style={{ textAlign: 'center', borderTop: `3px solid ${dimensionColor(score.bonus_score)}` }}>
-                    <Statistic
-                      title="问题解决分 (20%)"
-                      value={score.bonus_score}
-                      valueStyle={{ color: dimensionColor(score.bonus_score), fontWeight: 700, fontSize: 20 }}
-                    />
-                  </Card>
-                </Col>
-              </Row>
-              {/* V3.4: 项目制附加维度——统一展示，非项目制考试无对应数据时显示 0 */}
-              <Row gutter={[8, 8]} style={{ marginTop: 8 }}>
-                <Col span={8}>
-                  <Card size="small" style={{ textAlign: 'center', borderTop: `3px solid ${dimensionColor(details.project_score || 0)}` }}>
-                    <Statistic
-                      title="项目任务分"
-                      value={details.project_score ?? 0}
-                      valueStyle={{ color: dimensionColor(details.project_score || 0), fontWeight: 700, fontSize: 18 }}
-                    />
-                  </Card>
-                </Col>
-                <Col span={8}>
-                  <Card size="small" style={{ textAlign: 'center', borderTop: `3px solid ${dimensionColor(details.flow_coherence_score || 0)}` }}>
-                    <Statistic
-                      title="流程连贯性"
-                      value={details.flow_coherence_score ?? 0}
-                      valueStyle={{ color: dimensionColor(details.flow_coherence_score || 0), fontWeight: 700, fontSize: 18 }}
-                    />
-                  </Card>
-                </Col>
-                <Col span={8}>
-                  <Card size="small" style={{ textAlign: 'center', borderTop: `3px solid ${dimensionColor(details.adaptability_score || 0)}` }}>
-                    <Statistic
-                      title="应变能力"
-                      value={details.adaptability_score ?? 0}
-                      valueStyle={{ color: dimensionColor(details.adaptability_score || 0), fontWeight: 700, fontSize: 18 }}
-                    />
-                    <Text type="secondary" style={{ fontSize: 11 }}>
-                      突发{details.emergency_total || 0}次 · 成功{details.emergency_success || 0}次
-                    </Text>
-                  </Card>
-                </Col>
-              </Row>
+            <Col span={6}>
+              <Card size="small" style={{ borderRadius: 10, textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+                styles={{ body: { padding: '16px 12px' } }}>
+                <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 8 }}>服务态度 <Text type="secondary">(25%)</Text></div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: dimensionColor(score.emotion_score) }}>{score.emotion_score}</div>
+                <Progress
+                  percent={score.emotion_score}
+                  strokeColor={dimensionColor(score.emotion_score)}
+                  showInfo={false}
+                  size="small"
+                  style={{ marginTop: 8 }}
+                />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small" style={{ borderRadius: 10, textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+                styles={{ body: { padding: '16px 12px' } }}>
+                <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 8 }}>沟通效率 <Text type="secondary">(15%)</Text></div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: dimensionColor(score.efficiency_score) }}>{score.efficiency_score}</div>
+                <Progress
+                  percent={score.efficiency_score}
+                  strokeColor={dimensionColor(score.efficiency_score)}
+                  showInfo={false}
+                  size="small"
+                  style={{ marginTop: 8 }}
+                />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small" style={{ borderRadius: 10, textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+                styles={{ body: { padding: '16px 12px' } }}>
+                <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 8 }}>问题解决 <Text type="secondary">(20%)</Text></div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: dimensionColor(score.bonus_score) }}>{score.bonus_score}</div>
+                <Progress
+                  percent={score.bonus_score}
+                  strokeColor={dimensionColor(score.bonus_score)}
+                  showInfo={false}
+                  size="small"
+                  style={{ marginTop: 8 }}
+                />
+              </Card>
             </Col>
           </Row>
 
+          {/* 附加维度 */}
+          {(details.project_score != null || details.flow_coherence_score != null || details.adaptability_score != null) && (
+            <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+              {details.project_score != null && (
+                <Col span={8}>
+                  <Card size="small" style={{ borderRadius: 10, textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+                    styles={{ body: { padding: '12px' } }}>
+                    <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>项目任务分</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: dimensionColor(details.project_score || 0) }}>{details.project_score ?? 0}</div>
+                  </Card>
+                </Col>
+              )}
+              {details.flow_coherence_score != null && (
+                <Col span={8}>
+                  <Card size="small" style={{ borderRadius: 10, textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+                    styles={{ body: { padding: '12px' } }}>
+                    <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>流程连贯性</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: dimensionColor(details.flow_coherence_score || 0) }}>{details.flow_coherence_score ?? 0}</div>
+                  </Card>
+                </Col>
+              )}
+              {details.adaptability_score != null && (
+                <Col span={8}>
+                  <Card size="small" style={{ borderRadius: 10, textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+                    styles={{ body: { padding: '12px' } }}>
+                    <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>应变能力</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: dimensionColor(details.adaptability_score || 0) }}>{details.adaptability_score ?? 0}</div>
+                    <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>突发{details.emergency_total || 0}次·成功{details.emergency_success || 0}次</div>
+                  </Card>
+                </Col>
+              )}
+            </Row>
+          )}
+
+          {/* 改进建议卡片 - 移到前面更突出 */}
+          <Card
+            size="small"
+            title={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <BulbOutlined style={{ color: '#faad14', fontSize: 16 }} />
+                <span style={{ fontWeight: 600 }}>改进建议</span>
+              </div>
+            }
+            style={{ marginBottom: 16, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+            styles={{ body: { padding: '16px 20px' } }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {suggestions.map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 12,
+                    padding: '10px 14px',
+                    borderRadius: 8,
+                    background: idx === 0 && score.overall_score >= 80 ? '#f6ffed' : '#fffbe6',
+                    border: `1px solid ${idx === 0 && score.overall_score >= 80 ? '#b7eb8f' : '#ffe58f'}`,
+                  }}
+                >
+                  <div style={{
+                    width: 24, height: 24, borderRadius: '50%',
+                    background: idx === 0 && score.overall_score >= 80 ? '#52c41a' : '#faad14',
+                    color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12, fontWeight: 700, flexShrink: 0,
+                  }}>
+                    {idx + 1}
+                  </div>
+                  <Text style={{ fontSize: 13, lineHeight: 1.6 }}>{item}</Text>
+                </div>
+              ))}
+            </div>
+          </Card>
+
           {/* V3.4: 意图/任务切换历史 */}
           {(details.intent_history?.length > 0 || details.task_history?.length > 0) && (
-            <Card size="small" title="🎯 意图/任务推进历史" style={{ marginBottom: 16 }}>
+            <Card size="small" title="🎯 意图/任务推进历史" style={{ marginBottom: 16, borderRadius: 12 }}>
               {details.task_history?.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
                   <Text strong style={{ color: '#722ed1' }}>任务切换历史：</Text>
-                  <div style={{ marginTop: 4 }}>
+                  <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {details.task_history.map((t, idx) => (
-                      <Tag key={idx} color="purple" style={{ marginBottom: 4 }}>
-                        第{t.round}轮：{t.previous_task} → {t.current_task || '完成'}（{t.reason}）
+                      <Tag key={idx} color="purple" style={{ margin: 0, borderRadius: 6, padding: '4px 10px' }}>
+                        第{t.round}轮：{t.previous_task} → {t.current_task || '完成'}
                       </Tag>
                     ))}
                   </div>
@@ -1401,9 +1851,9 @@ const DynamicExam = () => {
               {details.intent_history?.length > 0 && (
                 <div>
                   <Text strong style={{ color: '#531dab' }}>意图切换历史：</Text>
-                  <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {details.intent_history.map((t, idx) => (
-                      <Tag key={idx} color="default" style={{ fontSize: 11 }}>
+                      <Tag key={idx} color="default" style={{ margin: 0, borderRadius: 6, fontSize: 11 }}>
                         第{t.round}轮：{t.previous_intent} → {t.current_intent || '完成'}
                       </Tag>
                     ))}
@@ -1414,17 +1864,18 @@ const DynamicExam = () => {
           )}
 
           {/* 烦躁值变化曲线 */}
-          <Card size="small" title="📈 烦躁值变化曲线" style={{ marginBottom: 16 }}>
+          <Card size="small" title="📈 烦躁值变化曲线" style={{ marginBottom: 16, borderRadius: 12 }}>
             {chartData.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="round" tick={{ fontSize: 11 }} />
                     <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
                     <RTooltip
                       formatter={(v) => [`${v}`, '烦躁值']}
                       labelFormatter={(l) => `${l}`}
+                      contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                     />
                     <Legend />
                     <ReferenceLine y={anxietyThreshold} stroke="#f5222d" strokeDasharray="4 4"
@@ -1434,33 +1885,39 @@ const DynamicExam = () => {
                       dataKey="anxiety"
                       name="烦躁值"
                       stroke="#fa541c"
-                      strokeWidth={2.5}
-                      dot={{ r: 4, fill: '#fa541c' }}
+                      size={3}
+                      dot={{ r: 4, fill: '#fa541c', strokeWidth: 2, stroke: '#fff' }}
+                      activeDot={{ r: 6 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
-                <Row gutter={16} style={{ marginTop: 8 }}>
+                <Row gutter={16} style={{ marginTop: 12 }}>
                   <Col span={8}>
-                    <Statistic title="初始烦躁值" value={initialAnxiety} valueStyle={{ fontSize: 16 }} />
+                    <div style={{ textAlign: 'center', padding: '8px', background: '#f5f7fa', borderRadius: 8 }}>
+                      <Statistic title="初始烦躁值" value={initialAnxiety} valueStyle={{ fontSize: 20, fontWeight: 700 }} />
+                    </div>
                   </Col>
                   <Col span={8}>
-                    <Statistic title="最高烦躁值" value={details.anxiety_drop != null ? (initialAnxiety - details.anxiety_drop) : '-'}
-                      valueStyle={{ fontSize: 16, color: '#f5222d' }} />
+                    <div style={{ textAlign: 'center', padding: '8px', background: '#fff2f0', borderRadius: 8 }}>
+                      <Statistic title="最高烦躁值" value={details.anxiety_drop != null ? (initialAnxiety - details.anxiety_drop) : '-'}
+                        valueStyle={{ fontSize: 20, fontWeight: 700, color: '#f5222d' }} />
+                    </div>
                   </Col>
                   <Col span={8}>
-                    <Statistic
-                      title="净变化"
-                      value={details.anxiety_drop > 0 ? `-${details.anxiety_drop}` : (details.anxiety_drop < 0 ? `+${Math.abs(details.anxiety_drop)}` : 0)}
-                      valueStyle={{ fontSize: 16, color: details.anxiety_drop > 0 ? '#52c41a' : '#f5222d' }}
-                    />
+                    <div style={{ textAlign: 'center', padding: '8px', background: details.anxiety_drop > 0 ? '#f6ffed' : '#fff2f0', borderRadius: 8 }}>
+                      <Statistic
+                        title="净变化"
+                        value={details.anxiety_drop > 0 ? `-${details.anxiety_drop}` : (details.anxiety_drop < 0 ? `+${Math.abs(details.anxiety_drop)}` : 0)}
+                        valueStyle={{ fontSize: 20, fontWeight: 700, color: details.anxiety_drop > 0 ? '#52c41a' : '#f5222d' }}
+                      />
+                    </div>
                   </Col>
                 </Row>
-                <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: 12 }}>
-                  超阈值次数：<Text strong type={details.threshold_exceeded_count > 0 ? 'danger' : 'success'}>
-                    {details.threshold_exceeded_count || 0} 次
-                  </Text>
-                  <span style={{ margin: '0 8px' }}>·</span>
-                  实际轮数：{details.actual_rounds} / 预期 {details.expected_rounds} 轮
+                <div style={{ marginTop: 12, padding: '8px 12px', background: '#fafafa', borderRadius: 8, fontSize: 12, color: '#595959' }}>
+                  <Space size={16}>
+                    <span>超阈值次数：<Text strong type={details.threshold_exceeded_count > 0 ? 'danger' : 'success'}>{details.threshold_exceeded_count || 0} 次</Text></span>
+                    <span>实际轮数：<Text strong>{details.actual_rounds} / {details.expected_rounds} 轮</Text></span>
+                  </Space>
                 </div>
               </>
             ) : (
@@ -1469,62 +1926,52 @@ const DynamicExam = () => {
           </Card>
 
           {/* 业务线完成情况表格 */}
-          <Card size="small" title="📋 业务线完成情况" style={{ marginBottom: 16 }}>
+          <Card size="small" title="📋 业务线完成情况" style={{ marginBottom: 16, borderRadius: 12 }}>
             <Table
               size="small"
               dataSource={tableData}
               pagination={false}
+              style={{ borderRadius: 8 }}
               columns={[
                 { title: '业务线', dataIndex: 'business_line', key: 'business_line',
-                  render: (v, r) => <Space><Tag color={r.completed ? 'success' : 'default'}>{v}</Tag></Space> },
+                  render: (v, r) => <Tag color={r.completed ? 'success' : 'processing'} style={{ borderRadius: 4 }}>{v}</Tag> },
                 { title: '目标数', dataIndex: 'goals_total', key: 'goals_total', align: 'center' },
                 { title: '完成数', dataIndex: 'goals_done', key: 'goals_done', align: 'center',
-                  render: (v, r) => <Text style={{ color: v === r.goals_total ? '#52c41a' : '#faad14' }}>{v}</Text> },
+                  render: (v, r) => <Text strong style={{ color: v === r.goals_total ? '#52c41a' : '#faad14' }}>{v}</Text> },
                 { title: '使用轮数', dataIndex: 'rounds_used', key: 'rounds_used', align: 'center',
                   render: (v, r) => <Text type={v > r.rounds_expected ? 'danger' : 'secondary'}>{v} / {r.rounds_expected}</Text> },
                 { title: '得分', dataIndex: 'score', key: 'score', align: 'center',
-                  render: (v) => <Tag color={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'error'}>{v}</Tag> },
+                  render: (v) => <Tag color={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'error'} style={{ borderRadius: 4 }}>{v}</Tag> },
                 { title: '状态', dataIndex: 'completed', key: 'completed', align: 'center',
-                  render: (v) => v ? <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                    : <CloseCircleOutlined style={{ color: '#f5222d' }} /> },
+                  render: (v) => v ? <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 16 }} />
+                    : <CloseCircleOutlined style={{ color: '#f5222d', fontSize: 16 }} /> },
               ]}
             />
-            <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: 12 }}>
-              总完成度：{totalDone} / {totalGoals}（{totalGoals > 0 ? Math.round(totalDone / totalGoals * 100) : 0}%）
-              <span style={{ margin: '0 8px' }}>·</span>
-              总轮数：{totalRounds} / 预期 {totalExpected}
+            <div style={{ marginTop: 12, padding: '10px 14px', background: '#f6ffed', borderRadius: 8, fontSize: 13 }}>
+              <Space size={16}>
+                <span>总完成度：<Text strong style={{ color: '#52c41a' }}>{totalDone} / {totalGoals}（{totalGoals > 0 ? Math.round(totalDone / totalGoals * 100) : 0}%）</Text></span>
+                <span>总轮数：<Text strong>{totalRounds} / {totalExpected}</Text></span>
+              </Space>
             </div>
           </Card>
 
           {/* 弱点标签 */}
-          <Card size="small" title="🔥 弱点标签" style={{ marginBottom: 16 }}>
+          <Card size="small" title="🔥 弱点标签" style={{ marginBottom: 16, borderRadius: 12 }}>
             {weaknessTags.length === 0 ? (
-              <Alert type="success" showIcon message="本次考试未发现明显弱点，表现优秀！" />
+              <Alert type="success" showIcon message="本次考试未发现明显弱点，表现优秀！" style={{ borderRadius: 8 }} />
             ) : (
-              <Space wrap>
+              <Space wrap size={[8, 8]}>
                 {weaknessTags.map((t, idx) => {
                   const colorMap = { business: 'orange', emotion: 'magenta', efficiency: 'gold' }
                   return (
-                    <Tag key={idx} color={colorMap[t.dimension] || 'default'} icon={<WarningOutlined />} style={{ marginBottom: 4 }}>
+                    <Tag key={idx} color={colorMap[t.dimension] || 'default'} icon={<WarningOutlined />}
+                      style={{ margin: 0, borderRadius: 6, padding: '4px 10px', fontSize: 12 }}>
                       {t.tag}
                     </Tag>
                   )
                 })}
               </Space>
             )}
-          </Card>
-
-          {/* 改进建议 */}
-          <Card size="small" title="💡 改进建议">
-            <List
-              size="small"
-              dataSource={suggestions}
-              renderItem={(item, idx) => (
-                <List.Item style={{ padding: '4px 0' }}>
-                  <Text>{idx + 1}. {item}</Text>
-                </List.Item>
-              )}
-            />
           </Card>
         </div>
       </Modal>
@@ -1577,7 +2024,7 @@ const DynamicExam = () => {
                   <XAxis dataKey="round" tick={{ fontSize: 11 }} />
                   <YAxis domain={[0, 100]} />
                   <RTooltip />
-                  <Line type="monotone" dataKey="anxiety" name="烦躁值" stroke="#fa541c" strokeWidth={2} />
+                  <Line type="monotone" dataKey="anxiety" name="烦躁值" stroke="#fa541c" size={2} />
                 </LineChart>
               </ResponsiveContainer>
             </Card>
@@ -1601,19 +2048,47 @@ const DynamicExam = () => {
 
   // ===== 主页面渲染 =====
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 190px)', minHeight: 600 }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: 'calc(100vh - 190px)',
+      minHeight: 600,
+      background: '#f5f7fa',
+      borderRadius: 16,
+      overflow: 'hidden',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+    }}>
       {/* 顶部标题栏 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexShrink: 0 }}>
-        <Title level={3} style={{ margin: 0 }}>
-          <ThunderboltOutlined style={{ color: '#1d39c4', marginRight: 8 }} />
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '16px 24px',
+        background: '#fff',
+        borderBottom: '1px solid #e8e8e8',
+        flexShrink: 0,
+      }}>
+        <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: 'linear-gradient(135deg, #1677ff 0%, #4096ff 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <ThunderboltOutlined style={{ color: '#fff', fontSize: 20 }} />
+          </div>
           动态模拟考试
-          {personaType && <Tag color={personaDifficultyMap[personaType]?.color} style={{ marginLeft: 12, fontSize: 13 }}>{personaType}客户</Tag>}
+          {personaType && (
+            <Tag color={personaDifficultyMap[personaType]?.color} style={{ marginLeft: 8, borderRadius: 6, fontSize: 12 }}>
+              {personaType}客户
+            </Tag>
+          )}
         </Title>
-        <Space>
+        <Space size={10}>
           <Button
             icon={<ReloadOutlined />}
             onClick={handleReset}
             disabled={examStatus === 'idle'}
+            style={{ borderRadius: 8, height: 36 }}
           >
             重新开始
           </Button>
@@ -1621,6 +2096,7 @@ const DynamicExam = () => {
             icon={<HistoryOutlined />}
             onClick={loadHistory}
             loading={historyLoading}
+            style={{ borderRadius: 8, height: 36 }}
           >
             历史记录
           </Button>
@@ -1630,12 +2106,18 @@ const DynamicExam = () => {
       {/* 主体：左侧聊天区 + 右侧监测面板 */}
       <div style={{ position: 'relative', flex: 1, display: 'flex', minHeight: 0 }}>
         {/* 左侧：聊天区域 */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, borderRight: '1px solid #e8e8e8' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: '#fff' }}>
           {renderChatArea()}
           {renderInputArea()}
         </div>
         {/* 右侧：监测面板 */}
-        <div style={{ width: 320, flexShrink: 0, overflowY: 'auto', background: '#fafafa', borderLeft: '1px solid #e8e8e8' }}>
+        <div style={{
+          width: 340,
+          flexShrink: 0,
+          overflowY: 'auto',
+          background: '#f5f7fa',
+          borderLeft: '1px solid #e8e8e8',
+        }}>
           {renderStatusBar()}
         </div>
         {renderIdleMask()}

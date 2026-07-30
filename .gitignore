@@ -73,3 +73,5 @@ coverage.xml
 # ===== 个人随手文件（不属于项目内容）=====
 新建 DOCX 文档.pdf
 获取 openai的key.txt
+# 强制排除venv
+venv/

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Typography, Card, Select, Radio, Button, Input, Space, message, Tag, Modal, Descriptions, List, Empty, Alert, Spin } from 'antd'
+import { Typography, Card, Select, Radio, Button, Input, Space, App, Tag, Modal, Descriptions, List, Empty, Alert, Spin } from 'antd'
 import { SendOutlined, ReloadOutlined, FlagOutlined } from '@ant-design/icons'
 import axios from 'axios'
 import { API_V1 } from '../config/api'
@@ -15,6 +15,7 @@ const MODE_OPTIONS = [
 ]
 
 const CozePracticeTrainee = () => {
+  const { message } = App.useApp()
   const [businessLines, setBusinessLines] = useState([])
   const [loadingLines, setLoadingLines] = useState(false)
   const [selectedLine, setSelectedLine] = useState(undefined)
@@ -126,7 +127,7 @@ const CozePracticeTrainee = () => {
 
       {!session && (
         <Card>
-          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          <Space orientation="vertical" size="large" style={{ width: '100%' }}>
             <div>
               <Text strong>选择业务线</Text>
               <div style={{ marginTop: 8 }}>

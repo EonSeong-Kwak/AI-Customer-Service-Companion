@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Typography, Table, Button, Space, Modal, Form, Input, message, Tag, Select, AutoComplete } from 'antd'
+import { Typography, Table, Button, Space, Modal, Form, Input, App, Tag, Select, AutoComplete } from 'antd'
 import { ThunderboltOutlined } from '@ant-design/icons'
 import axios from 'axios'
 import { API_BASE } from './constants'
@@ -8,6 +8,7 @@ const { TextArea } = Input
 
 // ===== V6.0: AI 起草练习题草稿审核 =====
 const PracticeQuestionDraftsTab = () => {
+  const { message } = App.useApp()
   const [drafts, setDrafts] = useState([])
   const [loading, setLoading] = useState(false)
   const [businessLines, setBusinessLines] = useState([])
@@ -189,7 +190,7 @@ const PracticeQuestionDraftsTab = () => {
         ]}
       />
 
-      <Modal title="生成题目草稿" open={generateVisible} onOk={handleGenerate} confirmLoading={generating} onCancel={() => setGenerateVisible(false)} destroyOnClose>
+      <Modal title="生成题目草稿" open={generateVisible} onOk={handleGenerate} confirmLoading={generating} onCancel={() => setGenerateVisible(false)} destroyOnHidden>
         <Form form={generateForm} layout="vertical">
           <Form.Item name="business_line" label="归属业务线" rules={[{ required: true, message: '请选择或输入业务线' }]}>
             <AutoComplete
@@ -214,7 +215,7 @@ const PracticeQuestionDraftsTab = () => {
         </Form>
       </Modal>
 
-      <Modal title="编辑草稿" open={!!editingDraft} onOk={handleSaveEdit} onCancel={() => setEditingDraft(null)} okText="保存" destroyOnClose>
+      <Modal title="编辑草稿" open={!!editingDraft} onOk={handleSaveEdit} onCancel={() => setEditingDraft(null)} okText="保存" destroyOnHidden>
         <Form form={editForm} layout="vertical">
           <Form.Item name="scenario" label="场景（题干）" rules={[{ required: true, message: '请输入题干' }]}>
             <TextArea rows={2} />
@@ -237,7 +238,7 @@ const PracticeQuestionDraftsTab = () => {
         onOk={handleApprove}
         confirmLoading={actionLoading === approvingDraft?.id}
         onCancel={() => setApprovingDraft(null)}
-        destroyOnClose
+        destroyOnHidden
       >
         <Typography.Paragraph type="secondary">
           写入题目镜像表后仍需要手动把文案同步到 Coze 工作流编辑器（题目节点管理页可标记同步状态）。

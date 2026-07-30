@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Typography, Table, Button, Space, Modal, Form, Input, message, Popconfirm, Tag, Row, Col, Select } from 'antd'
+import { Typography, Table, Button, Space, Modal, Form, Input, App, Popconfirm, Tag, Row, Col, Select } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import axios from 'axios'
 import { API_BASE } from './constants'
@@ -8,6 +8,7 @@ const { TextArea } = Input
 
 // ===== V6.0: 练习节点题目镜像表管理 =====
 const PracticeNodeQuestionsTab = () => {
+  const { message } = App.useApp()
   const [nodes, setNodes] = useState([])
   const [loading, setLoading] = useState(false)
   const [businessLines, setBusinessLines] = useState([])
@@ -147,7 +148,7 @@ const PracticeNodeQuestionsTab = () => {
         onOk={handleSave}
         onCancel={() => setModalVisible(false)}
         width={700}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Typography, Table, Button, Space, Modal, Form, Input, message, Popconfirm, Tag, Row, Col, Checkbox } from 'antd'
+import { Typography, Table, Button, Space, Modal, Form, Input, App, Popconfirm, Tag, Row, Col, Checkbox } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import axios from 'axios'
 import { API_BASE } from './constants'
@@ -8,6 +8,7 @@ const { TextArea } = Input
 
 // ===== V6.0: Coze 工作流注册表管理 =====
 const CozeWorkflowRegistryTab = () => {
+  const { message } = App.useApp()
   const [registries, setRegistries] = useState([])
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
@@ -109,7 +110,7 @@ const CozeWorkflowRegistryTab = () => {
         onOk={handleSave}
         onCancel={() => setModalVisible(false)}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical">
           <Form.Item name="business_line" label="业务线" rules={[{ required: true, message: '请输入业务线名称' }]}>
