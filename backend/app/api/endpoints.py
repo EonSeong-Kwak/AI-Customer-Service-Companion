@@ -104,11 +104,35 @@ __WEAKNESS__{{"score": 75, "missed_points": ["未提及的踩分点1", "踩分�
             messages = [{"role": "user", "content": evaluation_prompt}]
 
             async def quiz_generator():
-                yield "【练习判分结果】\n"
-                full_reply = "【练习判分结果】\n"
+                prefix = "【练习判分结果】\n"
+                yield prefix
+                full_reply = prefix
+
+                # __WEAKNESS__{...} 是给后端提取弱点标签用的内部标记，不能原样透传给前端，
+                # 否则考生会在聊天记录里看到裸露的 JSON。用一个小缓冲区把标记及其后的内容
+                # 拦下来（只用于拼进 full_reply 供下面的正则提取），标记之前的正常点评内容照常流式下发。
+                # 缓冲区要保留够 len(marker)-1 个字符，避免 chunk 切分点正好落在标记中间导致漏判。
+                marker = "__WEAKNESS__"
+                buffer = ""
+                marker_found = False
                 async for chunk in llm_client.chat_completion_stream(messages):
                     full_reply += chunk
-                    yield chunk
+                    if marker_found:
+                        continue
+                    buffer += chunk
+                    if marker in buffer:
+                        idx = buffer.index(marker)
+                        if buffer[:idx]:
+                            yield buffer[:idx]
+                        marker_found = True
+                        buffer = ""
+                    else:
+                        safe_len = max(0, len(buffer) - (len(marker) - 1))
+                        if safe_len > 0:
+                            yield buffer[:safe_len]
+                            buffer = buffer[safe_len:]
+                if not marker_found and buffer:
+                    yield buffer
 
                 # 判分完成后，提取弱点标签并持久化
                 try:
@@ -999,15 +1023,26 @@ def _reap_stale_exam_cache():
 
 
 class StartDynamicExamRequest(BaseModel):
-    pass
+    persona_id: str | None = None  # 考生指定的客户人格；不传则随机（保持原有行为）
+
+
+@router.get("/personas")
+async def list_personas_for_trainee(db: AsyncSession = Depends(get_db)):
+    """考生端只读人格列表，用于动态模拟考试的人格选择器（不含 system_prompt 等内部字段）"""
+    stmt = select(Persona).order_by(Persona.created_at.desc())
+    result = await db.execute(stmt)
+    return [
+        {"id": p.id, "name": p.name, "description": p.description}
+        for p in result.scalars().all()
+    ]
 
 
 @router.post("/dynamic-exam/start")
-async def start_dynamic_exam(db: AsyncSession = Depends(get_db)):
+async def start_dynamic_exam(request: StartDynamicExamRequest, db: AsyncSession = Depends(get_db)):
     """开始动态模拟考试"""
     try:
         trace_id = str(uuid.uuid4())
-        exam_state = await dynamic_exam_engine.initialize_exam(trace_id=trace_id)
+        exam_state = await dynamic_exam_engine.initialize_exam(trace_id=trace_id, persona_id=request.persona_id)
         
         # 确保 mock_user 存在
         mock_user = await db.get(User, "mock_user")

@@ -6,9 +6,7 @@ import { ConfigProvider, theme } from 'antd'
 import MainLayout from './components/MainLayout'
 import AdminDashboard from './pages/AdminDashboard'
 import TraineePortal from './pages/TraineePortal'
-import DynamicExam from './pages/DynamicExam'
-import CozePracticeTrainee from './pages/CozePracticeTrainee'
-import CozePracticeAdmin from './pages/CozePracticeAdmin'
+import DynamicExamHub from './pages/DynamicExamHub'
 
 function App() {
   return (
@@ -43,9 +41,11 @@ function App() {
               <Route index element={<Navigate to="/trainee" replace />} />
               <Route path="admin" element={<AdminDashboard />} />
               <Route path="trainee" element={<TraineePortal />} />
-              <Route path="dynamic-exam" element={<DynamicExam />} />
-              <Route path="coze-practice" element={<CozePracticeTrainee />} />
-              <Route path="coze-practice-admin" element={<CozePracticeAdmin />} />
+              <Route path="dynamic-exam" element={<DynamicExamHub />} />
+              {/* 情景陪练(Coze)已收拢进"动态模拟考试"里的一个板块，旧链接重定向过去并预选中对应板块 */}
+              <Route path="coze-practice" element={<Navigate to="/dynamic-exam?tab=coze" replace />} />
+              {/* Coze 工作流管理页与"管理员端"里的 Coze工作流注册/情景陪练题目管理/陪练题目AI起草 三个模块完全重复，已合并，旧链接跳去管理员端 */}
+              <Route path="coze-practice-admin" element={<Navigate to="/admin" replace />} />
             </Route>
           </Routes>
         </BrowserRouter>

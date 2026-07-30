@@ -5,13 +5,14 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import axios from 'axios'
+import { API_V1 } from '../config/api'
 
 const { Title } = Typography
 const { TextArea } = Input
 
 // Axios 实例
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/v1',
+  baseURL: API_V1,
   timeout: 30000,
 })
 
@@ -508,7 +509,7 @@ const TraineePortal = () => {
 
       setTargetHistory(prev => [...prev, { role: 'ai', content: '' }])
 
-      const response = await fetch('http://localhost:8000/api/v1/chat', {
+      const response = await fetch(`${API_V1}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

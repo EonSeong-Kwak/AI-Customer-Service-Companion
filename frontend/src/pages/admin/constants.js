@@ -1,1 +1,3 @@
-export const API_BASE = 'http://localhost:8000/api/v1/admin'
+import { API_V1 } from '../../config/api'
+
+export const API_BASE = `${API_V1}/admin`

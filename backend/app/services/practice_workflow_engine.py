@@ -242,14 +242,16 @@ class PracticeWorkflowEngine:
             t["missed_points"] = None
             t["score"] = None
             t["feedback"] = None
+            t["reference_answer"] = None
 
         for i, turn in enumerate(session.transcript or []):
             answer = turn.get("trainee_answer")
             node = nodes_by_order.get(i)
             if node:
-                # 无论这一轮是否作答/打分成功，都先把这道题配置的得分点亮出来，
-                # 报告里才能看清"这题原本要考什么"，而不是只有一个笼统的覆盖率数字
+                # 无论这一轮是否作答/打分成功，都先把这道题配置的得分点和推荐话术亮出来，
+                # 报告里才能看清"这题原本要考什么、应该怎么答"，而不是只有一个笼统的覆盖率数字
                 transcript[i]["key_points"] = node.key_points or []
+                transcript[i]["reference_answer"] = node.reference_answer
             if not answer:
                 continue
             if not node:

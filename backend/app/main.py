@@ -4,7 +4,6 @@ from app.api import api_router
 from app.api import admin
 from app.api import builder
 from app.api import coze_practice
-from app.api import coze_practice_admin
 from app.core.config import settings
 from app.core.logger import logger
 import uuid
@@ -51,8 +50,9 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(admin.router, prefix="/api/v1/admin")
 app.include_router(builder.router, prefix="/api/v1/admin/builder", tags=["builder"])
 # V6.0：Coze 工作流驱动的"练习/通关"模块，独立路由，不影响以上任何现有接口
+# （原本还有一个 coze_practice_admin 路由，管理端 CRUD 和 admin.router 里的
+#  /coze-workflows /practice-nodes /practice-question-drafts 完全重复，已删除，统一走 admin.router）
 app.include_router(coze_practice.router, prefix="/api/v1/coze-practice", tags=["coze-practice"])
-app.include_router(coze_practice_admin.router, prefix="/api/v1/coze-practice-admin", tags=["coze-practice-admin"])
 
 
 @app.on_event("startup")

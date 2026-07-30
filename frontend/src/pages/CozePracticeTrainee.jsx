@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Typography, Card, Select, Radio, Button, Input, Space, message, Tag, Modal, Descriptions, List, Empty, Alert, Spin } from 'antd'
 import { SendOutlined, ReloadOutlined, FlagOutlined } from '@ant-design/icons'
 import axios from 'axios'
+import { API_V1 } from '../config/api'
 
 const { Title, Paragraph, Text } = Typography
 const { TextArea } = Input
 
-const API_BASE = 'http://localhost:8000/api/v1/coze-practice'
+const API_BASE = `${API_V1}/coze-practice`
 
 const MODE_OPTIONS = [
   { label: '练习（原题练习，题目固定不变）', value: 'practice' },
@@ -275,6 +276,12 @@ const CozePracticeTrainee = () => {
                       {t.scored && t.feedback && (
                         <div style={{ marginTop: 4 }}>
                           <Text type="secondary">点评：{t.feedback}</Text>
+                        </div>
+                      )}
+                      {t.reference_answer && (
+                        <div style={{ marginTop: 8, padding: '8px 12px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6 }}>
+                          <Text strong style={{ color: '#389e0d' }}>推荐回答：</Text>
+                          <Text>{t.reference_answer}</Text>
                         </div>
                       )}
                     </div>

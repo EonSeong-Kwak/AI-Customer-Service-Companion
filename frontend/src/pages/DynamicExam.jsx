@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Typography, Card, Button, Input, Space, message, Modal, Progress, Tag, Tooltip,
-  Row, Col, Statistic, Table, Empty, Spin, Alert, Divider, List, Descriptions, Popconfirm
+  Row, Col, Statistic, Table, Empty, Spin, Alert, Divider, List, Descriptions, Popconfirm, Select
 } from 'antd'
 import {
   SendOutlined, RobotOutlined, CheckCircleOutlined, CloseCircleOutlined,
@@ -15,13 +15,14 @@ import {
   ResponsiveContainer, Legend, ReferenceLine
 } from 'recharts'
 import axios from 'axios'
+import { API_V1 } from '../config/api'
 
 const { Title, Text, Paragraph } = Typography
 const { TextArea } = Input
 
 // Axios 实例：动态考试接口基础地址
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/v1',
+  baseURL: API_V1,
   timeout: 60000,
 })
 
@@ -107,6 +108,18 @@ const DynamicExam = () => {
 
   const chatScrollRef = useRef(null)
 
+  // ===== 客户人格选择（可选，不选则和以前一样随机抽取）=====
+  const [personaOptions, setPersonaOptions] = useState([])
+  const [selectedPersonaId, setSelectedPersonaId] = useState(undefined)
+
+  useEffect(() => {
+    api.get('/personas').then(res => {
+      setPersonaOptions(res.data || [])
+    }).catch(() => {
+      // 拉取失败不影响开考，下拉框留空即可，后端没收到 persona_id 会自动随机
+    })
+  }, [])
+
   // 对话区自动滚动到底部
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -146,7 +159,7 @@ const DynamicExam = () => {
     setModalQueue([])
     setActiveModal(null)
     try {
-      const res = await api.post('/dynamic-exam/start', {}, { timeout: 180000 })
+      const res = await api.post('/dynamic-exam/start', { persona_id: selectedPersonaId || null }, { timeout: 180000 })
       const data = res.data
       setExamId(data.exam_id)
       setExamStatus('in_progress')
@@ -845,7 +858,7 @@ const DynamicExam = () => {
             <RobotOutlined style={{ fontSize: 72, marginBottom: 16, opacity: 0.4 }} />
             <div style={{ fontSize: 18, fontWeight: 500 }}>动态模拟考试系统</div>
             <div style={{ marginTop: 8, fontSize: 13, textAlign: 'center' }}>
-              点击下方"开始考试"按钮，系统将随机抽取业务线与客户人格
+              点击下方"开始考试"按钮，可选择客户人格，业务线仍由系统随机抽取
             </div>
           </div>
         ) : (
@@ -987,9 +1000,21 @@ const DynamicExam = () => {
           <RobotOutlined style={{ fontSize: 56, color: '#1d39c4', marginBottom: 12 }} />
           <Title level={4} style={{ marginBottom: 8 }}>动态模拟考试</Title>
           <Paragraph type="secondary" style={{ fontSize: 13, marginBottom: 20 }}>
-            系统将随机抽取业务线、客户人格、烦躁值阈值与业务目标，<br />
+            系统将随机抽取业务线、烦躁值阈值与业务目标，<br />
             全程 10-15 轮对话，综合考察业务能力、情绪管理与应变能力。
           </Paragraph>
+          <Select
+            allowClear
+            placeholder="客户人格：不选则随机抽取"
+            style={{ width: 280, marginBottom: 16, textAlign: 'left' }}
+            value={selectedPersonaId}
+            onChange={setSelectedPersonaId}
+            options={personaOptions.map(p => ({
+              value: p.id,
+              label: p.description ? `${p.name}（${p.description}）` : p.name,
+            }))}
+          />
+          <br />
           <Button
             type="primary"
             size="large"
@@ -1576,7 +1601,7 @@ const DynamicExam = () => {
 
   // ===== 主页面渲染 =====
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 140px)', minHeight: 600 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 190px)', minHeight: 600 }}>
       {/* 顶部标题栏 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexShrink: 0 }}>
         <Title level={3} style={{ margin: 0 }}>

@@ -59,6 +59,15 @@ const MODULE_GROUPS = [
   },
 ]
 
+// AI 人格生成器的标签快选：点标签拼描述，不用手动打字也能生成人格
+const PERSONA_TAG_GROUPS = [
+  { group: '身份年龄', tags: ['年轻人', '中年人', '老年人', '学生'] },
+  { group: '性格情绪', tags: ['急躁易怒', '平和耐心', '多疑警惕', '唠叨啰嗦', '沉默寡言', '情绪激动带哭腔'] },
+  { group: '表达障碍', tags: ['耳背听不清', '方言口音重', '不熟悉手机操作', '看不懂短信通知'] },
+  { group: '来电诉求', tags: ['密码重置', '信用卡挂失', '账户冻结解冻', '转账失败', '余额疑问', '开卡咨询'] },
+  { group: '特殊状况', tags: ['要投诉', '威胁曝光媒体', '赶时间很急', '反复确认不放心'] },
+]
+
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -69,7 +78,8 @@ const AdminDashboard = () => {
   const [editingPersona, setEditingPersona] = useState(null)
   const [personaForm] = Form.useForm()
   const [personaGeneratorVisible, setPersonaGeneratorVisible] = useState(false)
-  const [personaDescription, setPersonaDescription] = useState('')
+  const [selectedPersonaTags, setSelectedPersonaTags] = useState([])
+  const [personaExtraNote, setPersonaExtraNote] = useState('')
   const [generatingPersona, setGeneratingPersona] = useState(false)
   const [generatedPersona, setGeneratedPersona] = useState(null)
 
@@ -660,14 +670,15 @@ const AdminDashboard = () => {
   }
 
   const handleGeneratePersona = async () => {
-    if (!personaDescription.trim()) {
-      message.warning('请输入客户人格描述')
+    if (selectedPersonaTags.length === 0 && !personaExtraNote.trim()) {
+      message.warning('请至少选择一个标签，或填写补充说明')
       return
     }
+    const description = selectedPersonaTags.join('、') + (personaExtraNote.trim() ? `，${personaExtraNote.trim()}` : '')
     setGeneratingPersona(true)
     try {
       const res = await axios.post(`${API_BASE}/personas/generate`,
-        { description: personaDescription },
+        { description },
         { timeout: 90000 }
       )
       if (res.data.status === 'success') {
@@ -696,7 +707,8 @@ const AdminDashboard = () => {
       message.success('人格保存成功')
       setPersonaGeneratorVisible(false)
       setGeneratedPersona(null)
-      setPersonaDescription('')
+      setSelectedPersonaTags([])
+      setPersonaExtraNote('')
       fetchPersonas()
     } catch (err) {
       message.error('保存失败')
@@ -1509,31 +1521,53 @@ const AdminDashboard = () => {
       <Modal
         title="AI客户人格生成器"
         open={personaGeneratorVisible}
-        onCancel={() => { setPersonaGeneratorVisible(false); setGeneratedPersona(null); setPersonaDescription('') }}
+        onCancel={() => { setPersonaGeneratorVisible(false); setGeneratedPersona(null); setSelectedPersonaTags([]); setPersonaExtraNote('') }}
         width={700}
         footer={generatedPersona ? [
-          <Button key="cancel" onClick={() => { setPersonaGeneratorVisible(false); setGeneratedPersona(null); setPersonaDescription('') }}>取消</Button>,
+          <Button key="cancel" onClick={() => { setPersonaGeneratorVisible(false); setGeneratedPersona(null); setSelectedPersonaTags([]); setPersonaExtraNote('') }}>取消</Button>,
           <Button key="regenerate" onClick={() => { setGeneratedPersona(null); handleGeneratePersona() }}>重新生成</Button>,
           <Button key="save" type="primary" onClick={handleSaveGeneratedPersona}>保存到数据库</Button>
         ] : [
-          <Button key="cancel" onClick={() => { setPersonaGeneratorVisible(false); setGeneratedPersona(null); setPersonaDescription('') }}>取消</Button>,
+          <Button key="cancel" onClick={() => { setPersonaGeneratorVisible(false); setGeneratedPersona(null); setSelectedPersonaTags([]); setPersonaExtraNote('') }}>取消</Button>,
           <Button key="generate" type="primary" loading={generatingPersona} onClick={handleGeneratePersona}>生成</Button>
         ]}
       >
         {!generatedPersona ? (
           <div>
             <Typography.Paragraph type="secondary">
-              输入客户特征描述，AI将自动生成完整的人格配置（使用极速模型，约10-30秒）
+              点选下面的标签组合出客户特征，不用手动打字，AI将自动生成完整的人格配置（使用极速模型，约10-30秒）
             </Typography.Paragraph>
+            {PERSONA_TAG_GROUPS.map(({ group, tags }) => (
+              <div key={group} style={{ marginBottom: 12 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>{group}</Typography.Text>
+                <Space size={[8, 8]} wrap>
+                  {tags.map(tag => (
+                    <Tag.CheckableTag
+                      key={tag}
+                      checked={selectedPersonaTags.includes(tag)}
+                      onChange={(checked) => {
+                        setSelectedPersonaTags(prev => checked ? [...prev, tag] : prev.filter(t => t !== tag))
+                      }}
+                    >
+                      {tag}
+                    </Tag.CheckableTag>
+                  ))}
+                </Space>
+              </div>
+            ))}
+            <Divider style={{ margin: '12px 0' }} />
+            <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>补充说明（可选，标签之外想额外强调的细节）</Typography.Text>
             <Input.TextArea
-              rows={4}
-              placeholder="例如：暴躁老头，动不动就骂人，但耳背听不清。因为养老金没到账来打电话。"
-              value={personaDescription}
-              onChange={e => setPersonaDescription(e.target.value)}
+              rows={2}
+              placeholder="例如：因为养老金没到账来打电话"
+              value={personaExtraNote}
+              onChange={e => setPersonaExtraNote(e.target.value)}
             />
-            <Typography.Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
-              描述越详细，生成的人格越精准。建议包含：年龄/性格/来电目的/情绪特点
-            </Typography.Text>
+            {selectedPersonaTags.length > 0 && (
+              <Typography.Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
+                已选：{selectedPersonaTags.join('、')}
+              </Typography.Text>
+            )}
           </div>
         ) : (
           <div>

@@ -610,8 +610,8 @@ class DynamicExamEngine:
             return scenario
         return None
 
-    async def initialize_exam(self, trace_id: str = "N/A") -> Dict:
-        """初始化考试：从知识库提取业务线、随机选业务线和人格、设置目标"""
+    async def initialize_exam(self, trace_id: str = "N/A", persona_id: Optional[str] = None) -> Dict:
+        """初始化考试：从知识库提取业务线、随机选业务线，人格默认随机，也支持考生指定"""
         logger.bind(trace_id=trace_id).info("初始化动态考试")
 
         # 1. 从知识库动态获取业务线配置（方案二：优先用预热缓存）
@@ -644,9 +644,18 @@ class DynamicExamEngine:
         # 2. 随机选业务线
         first_line = random.choice(business_lines)
 
-        # 3. 随机选人格（从数据库加载）
+        # 3. 选人格（从数据库加载）：考生指定了 persona_id 就用指定的，否则随机
         persona_configs = await self.persona_configs
-        persona_type = random.choice(list(persona_configs.keys()))
+        persona_type = None
+        if persona_id:
+            for name, config in persona_configs.items():
+                if config.get("id") == persona_id:
+                    persona_type = name
+                    break
+            if persona_type is None:
+                logger.bind(trace_id=trace_id).warning(f"指定的 persona_id={persona_id} 未找到，降级为随机选人格")
+        if persona_type is None:
+            persona_type = random.choice(list(persona_configs.keys()))
         persona_config = persona_configs[persona_type]
 
         # 4. 生成踩分点（基于业务线，优先从知识库节点提取）
